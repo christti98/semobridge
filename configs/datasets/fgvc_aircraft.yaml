@@ -1,0 +1,71 @@
+DATASET:
+  NAME: "FGVCAircraft"
+  DIRECTORY: "fgvc_aircraft"
+
+TEST:
+ FINAL_MODEL: "best_val"
+
+HP_SEARCH:
+  PARAMS:
+    smoothness:
+      INIT: 0.01
+    alpha:
+      INIT: 1.0
+    beta:
+      INIT: 1.0
+    gamma:
+      INIT: 1.0
+    delta:
+      INIT: 1.0
+    lambda1:
+      INIT: 0.5
+    lambda2:
+      INIT: 0.75
+    lambda3:
+      INIT: 0.1
+    lambda4:
+      INIT: 0.1
+
+
+
+INPUT:
+  #AUGMENT_EPOCHS: 1 # Enable augmentation for this dataset
+  #AUGMENT_TRANSFORMS: ["horizontal_flip"]
+
+  FEW_SHOT_AUGMENTATION:
+    "1":
+      AUGMENT_EPOCHS: 10
+      AUGMENT_TRANSFORMS: ["random_resized_crop", "random_flip", "color_jitter"]
+      RRCROP_SCALE: [0.5, 1.0]
+    "2":
+      AUGMENT_EPOCHS: 1
+      AUGMENT_TRANSFORMS: ["horizontal_flip"]
+    "4":
+      AUGMENT_EPOCHS: 1
+      AUGMENT_TRANSFORMS: ["horizontal_flip"]
+
+      # AUGMENT_EPOCHS: 10
+      # AUGMENT_TRANSFORMS: ["random_resized_crop", "random_flip", "color_jitter"]
+      # RRCROP_SCALE: [0.5, 1.0]
+    "8":
+      AUGMENT_EPOCHS: 1
+      AUGMENT_TRANSFORMS: ["horizontal_flip"]
+
+      # AUGMENT_EPOCHS: 10
+      # AUGMENT_TRANSFORMS: ["random_resized_crop", "random_flip", "color_jitter"]
+      # RRCROP_SCALE: [0.5, 1.0]
+
+      # AUGMENT_EPOCHS: 20
+      # AUGMENT_TRANSFORMS: ["random_resized_crop", "random_flip", "color_jitter"]
+      # RRCROP_SCALE: [0.5, 1.0]
+    "16":
+      AUGMENT_EPOCHS: 1
+      AUGMENT_TRANSFORMS: ["horizontal_flip"]
+
+      # AUGMENT_EPOCHS: 10
+      # AUGMENT_TRANSFORMS: ["random_resized_crop", "random_flip", "color_jitter"]
+      # RRCROP_SCALE: [0.5, 1.0]
+
+      # AUGMENT_EPOCHS: 20
+      # AUGMENT_TRANSFORMS: ["random_resized_crop", "random_flip", "color_jitter"]
+      # RRCROP_SCALE: [0.5, 1.0]

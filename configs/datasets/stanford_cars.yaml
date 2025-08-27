@@ -1,0 +1,28 @@
+DATASET:
+  NAME: "StanfordCars"
+  DIRECTORY: "stanford_cars"
+
+TEST:
+ FINAL_MODEL: "best_val"
+
+INPUT:
+  #AUGMENT_EPOCHS: 1 # Enable augmentation for this dataset
+  #AUGMENT_TRANSFORMS: ["horizontal_flip"]
+
+  FEW_SHOT_AUGMENTATION:
+    "1":
+      AUGMENT_EPOCHS: 10
+      AUGMENT_TRANSFORMS: ["random_resized_crop", "random_flip"]
+      RRCROP_SCALE: [0.8, 1.0]
+    "2":
+      AUGMENT_EPOCHS: 1
+      AUGMENT_TRANSFORMS: ["horizontal_flip"]
+    "4":
+      AUGMENT_EPOCHS: 1
+      AUGMENT_TRANSFORMS: ["horizontal_flip"]
+    "8":
+      AUGMENT_EPOCHS: 1
+      AUGMENT_TRANSFORMS: ["horizontal_flip"]
+    "16":
+      AUGMENT_EPOCHS: 1
+      AUGMENT_TRANSFORMS: ["horizontal_flip"]

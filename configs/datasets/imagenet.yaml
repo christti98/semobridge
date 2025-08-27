@@ -1,0 +1,51 @@
+DATASET:
+  NAME: "ImageNet"
+  DIRECTORY: "imagenet"
+
+TEST:
+  FINAL_MODEL: "last_step"
+
+HP_SEARCH:
+  PARAMS:
+    smoothness:
+      INIT: 0.02
+    alpha:
+      INIT: 0.6
+    beta:
+      INIT: 0.45
+    gamma:
+      INIT: 0.7
+    delta:
+      INIT: 0.0001
+    lambda1:
+      INIT: 50.0
+    lambda2:
+      INIT: 40.0
+    lambda3:
+      INIT: 10.0
+    lambda4:
+      INIT: 60.0
+
+INPUT:
+  #AUGMENT_EPOCHS: 1 # Enable augmentation for this dataset
+  #AUGMENT_TRANSFORMS: ["horizontal_flip"]
+
+  FEW_SHOT_AUGMENTATION:
+    "1":
+      AUGMENT_EPOCHS: 1
+      AUGMENT_TRANSFORMS: ["horizontal_flip"]
+    "2":
+      AUGMENT_EPOCHS: 1
+      AUGMENT_TRANSFORMS: ["horizontal_flip"]
+    "4":
+      AUGMENT_EPOCHS: 1
+      AUGMENT_TRANSFORMS: ["horizontal_flip"]
+    "8":
+      AUGMENT_EPOCHS: 1
+      AUGMENT_TRANSFORMS: ["horizontal_flip"]
+    "16":
+      # AUGMENT_EPOCHS: 1
+      # AUGMENT_TRANSFORMS: ["horizontal_flip"]
+
+      AUGMENT_EPOCHS: 1
+      AUGMENT_TRANSFORMS: ["horizontal_flip"]

@@ -1,0 +1,21 @@
+DATASET:
+  NAME: "Food101"
+  DIRECTORY: "food-101"
+
+TEST:
+ FINAL_MODEL: "best_val"
+
+INPUT:
+  #AUGMENT_EPOCHS: 0 # Disable augmentation for this dataset
+
+  FEW_SHOT_AUGMENTATION:
+    "1":
+      AUGMENT_EPOCHS: 0
+    "2":
+      AUGMENT_EPOCHS: 0
+    "4":
+      AUGMENT_EPOCHS: 0
+    "8":
+      AUGMENT_EPOCHS: 0
+    "16":
+      AUGMENT_EPOCHS: 0

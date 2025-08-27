@@ -1,0 +1,55 @@
+DATASET:
+  NAME: "EuroSAT"
+  DIRECTORY: "eurosat"
+
+TEST:
+ FINAL_MODEL: "best_val"
+
+INPUT:
+  #AUGMENT_EPOCHS: 1 # Enable augmentation for this dataset
+  #AUGMENT_TRANSFORMS: ["horizontal_flip"]
+
+  FEW_SHOT_AUGMENTATION:
+    "1":
+      AUGMENT_EPOCHS: 1
+      AUGMENT_TRANSFORMS: ["horizontal_flip"]
+
+      # AUGMENT_EPOCHS: 10
+      # AUGMENT_TRANSFORMS: ["random_resized_crop", "random_flip", "color_jitter"]
+      # RRCROP_SCALE: [0.5, 1.0]
+    "2":
+      # AUGMENT_EPOCHS: 1
+      # AUGMENT_TRANSFORMS: ["horizontal_flip"]
+
+      AUGMENT_EPOCHS: 10
+      AUGMENT_TRANSFORMS: ["random_resized_crop", "random_flip", "color_jitter"]
+      RRCROP_SCALE: [0.5, 1.0]
+    "4":
+      AUGMENT_EPOCHS: 1
+      AUGMENT_TRANSFORMS: ["horizontal_flip"]
+
+      # AUGMENT_EPOCHS: 10
+      # AUGMENT_TRANSFORMS: ["random_resized_crop", "random_flip", "color_jitter"]
+      # RRCROP_SCALE: [0.5, 1.0]
+    "8":
+      AUGMENT_EPOCHS: 1
+      AUGMENT_TRANSFORMS: ["horizontal_flip"]
+
+      # AUGMENT_EPOCHS: 10
+      # AUGMENT_TRANSFORMS: ["random_resized_crop", "random_flip", "color_jitter"]
+      # RRCROP_SCALE: [0.5, 1.0]
+
+      # AUGMENT_EPOCHS: 5
+      # AUGMENT_TRANSFORMS: ["random_resized_crop", "random_flip", "color_jitter"]
+      # RRCROP_SCALE: [0.5, 1.0]
+    "16":
+      AUGMENT_EPOCHS: 1
+      AUGMENT_TRANSFORMS: ["horizontal_flip"]
+
+      # AUGMENT_EPOCHS: 10
+      # AUGMENT_TRANSFORMS: ["random_resized_crop", "random_flip", "color_jitter"]
+      # RRCROP_SCALE: [0.5, 1.0]
+
+      # AUGMENT_EPOCHS: 5
+      # AUGMENT_TRANSFORMS: ["random_resized_crop", "random_flip", "color_jitter"]
+      # RRCROP_SCALE: [0.5, 1.0]

@@ -1,0 +1,27 @@
+DATASET:
+  NAME: "ImageNetR"
+  DIRECTORY: "imagenet-rendition"
+
+TEST:
+ FINAL_MODEL: "best_val"
+
+INPUT:
+  #AUGMENT_EPOCHS: 1 # Enable augmentation for this dataset
+  #AUGMENT_TRANSFORMS: ["horizontal_flip"]
+
+  FEW_SHOT_AUGMENTATION:
+    "1":
+      AUGMENT_EPOCHS: 1
+      AUGMENT_TRANSFORMS: ["horizontal_flip"]
+    "2":
+      AUGMENT_EPOCHS: 1
+      AUGMENT_TRANSFORMS: ["horizontal_flip"]
+    "4":
+      AUGMENT_EPOCHS: 1
+      AUGMENT_TRANSFORMS: ["horizontal_flip"]
+    "8":
+      AUGMENT_EPOCHS: 1
+      AUGMENT_TRANSFORMS: ["horizontal_flip"]
+    "16":
+      AUGMENT_EPOCHS: 1
+      AUGMENT_TRANSFORMS: ["horizontal_flip"]

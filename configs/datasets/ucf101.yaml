@@ -1,0 +1,61 @@
+DATASET:
+  NAME: "UCF101"
+  DIRECTORY: "ucf101"
+
+TEST:
+ FINAL_MODEL: "best_val"
+
+# INIT:
+    # smoothness: 0.2
+    # alpha: 0.01
+    # beta: 0.9
+    # gamma: 0.5
+    # delta: 0.5
+    # lambda1: 4.0
+    # lambda2: 90
+    # lambda3: 6.0
+    # lambda4: 15.0
+
+# HP_SEARCH:
+#   N_TRIALS: 1000
+#   PARAMS:
+#     smoothness:
+#       INIT: 0.2
+#     alpha:
+#       INIT: 0.01
+#     beta:
+#       INIT: 0.9
+#     gamma:
+#       INIT: 0.5
+#     delta:
+#       INIT: 0.5
+#     lambda1:
+#       INIT: 4.0
+#     lambda2:
+#       INIT: 90.0
+#     lambda3:
+#       INIT: 6.0
+#     lambda4:
+#       INIT: 15.0
+
+
+INPUT:
+  #AUGMENT_EPOCHS: 1 # Enable augmentation for this dataset
+  #AUGMENT_TRANSFORMS: ["horizontal_flip"]
+
+  FEW_SHOT_AUGMENTATION:
+    "1":
+      AUGMENT_EPOCHS: 1
+      AUGMENT_TRANSFORMS: ["horizontal_flip"]
+    "2":
+      AUGMENT_EPOCHS: 1
+      AUGMENT_TRANSFORMS: ["horizontal_flip"]
+    "4":
+      AUGMENT_EPOCHS: 1
+      AUGMENT_TRANSFORMS: ["horizontal_flip"]
+    "8":
+      AUGMENT_EPOCHS: 1
+      AUGMENT_TRANSFORMS: ["horizontal_flip"]
+    "16":
+      AUGMENT_EPOCHS: 1
+      AUGMENT_TRANSFORMS: ["horizontal_flip"]

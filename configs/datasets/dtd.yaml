@@ -1,0 +1,59 @@
+DATASET:
+  NAME: "DescribableTextures"
+  DIRECTORY: "dtd"
+  
+TEST:
+ FINAL_MODEL: "best_val"
+ 
+HP_SEARCH:
+  N_TRIALS: 1000
+  PARAMS:
+    smoothness:
+      INIT: 0.01
+    alpha:
+      INIT: 40.0
+    beta:
+      INIT: 1.0
+    gamma:
+      INIT: 47.0
+    delta:
+      INIT: 7.0
+    lambda1:
+      INIT: 0.02
+    lambda2:
+      INIT: 0.2
+    lambda3:
+      INIT: 0.05
+    lambda4:
+      INIT: 0.34
+
+INPUT:
+  #AUGMENT_EPOCHS: 0 # Disable augmentation for this dataset
+
+  FEW_SHOT_AUGMENTATION:
+    "1":
+      AUGMENT_EPOCHS: 10
+      AUGMENT_TRANSFORMS: ["random_resized_crop", "random_flip", "color_jitter"]
+      RRCROP_SCALE: [0.5, 1.0]
+    "2":
+      # AUGMENT_EPOCHS: 0
+
+      AUGMENT_EPOCHS: 10
+      AUGMENT_TRANSFORMS: ["random_resized_crop", "random_flip", "color_jitter"]
+      RRCROP_SCALE: [0.5, 1.0]
+    "4":
+      # AUGMENT_EPOCHS: 10
+      # AUGMENT_TRANSFORMS: ["random_resized_crop", "random_flip", "color_jitter"]
+      # RRCROP_SCALE: [0.8, 1.0]
+
+      AUGMENT_EPOCHS: 10
+      AUGMENT_TRANSFORMS: ["random_resized_crop", "random_flip", "color_jitter"]
+      RRCROP_SCALE: [0.8, 1.0]
+    "8":
+      AUGMENT_EPOCHS: 0
+    "16":
+      #AUGMENT_EPOCHS: 0
+
+      AUGMENT_EPOCHS: 5
+      AUGMENT_TRANSFORMS: ["random_resized_crop", "random_flip", "color_jitter"]
+      RRCROP_SCALE: [0.8, 1.0]
