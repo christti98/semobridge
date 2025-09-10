@@ -41,7 +41,7 @@ We include four bash (`.sh`) scripts to make running SeMoBridge or SeMoBridge-T 
 You may have to change the DATA path in the script to point to the datasets. 
 
 To run SeMoBridge ViT-B/16 on everything, use the command<br>`bash scripts/semobridge/run_all_datasets_notrain.sh vit_b16 clip_ensemble,cupl_full True`.
-<br>The results will be saved in a .csv file. For example `OUTPUT/SeMoBridge_vit_b16_submit3_clip_ensemble,cupl_full_cbTrue.csv`.
+<br>The results will be saved in a .csv file. For example `OUTPUT/SeMoBridge_vit_b16_clip_ensemble,cupl_full_cbTrue.csv`.
 
 ### Training SeMoBridge-T
 SeMoBridge-T training is done in the same way:<br>`bash scripts/semobridge/run_all_datasets.sh vit_b16 clip_ensemble,cupl_full True`
