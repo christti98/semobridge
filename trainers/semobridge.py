@@ -245,6 +245,15 @@ class SeMoBridge(SimpleTrainer):
                 "lambda3": 0.1,
                 "lambda4": 0.1,
             }
+            if "z1" not in self.cfg.LOGITS:
+                self.val_params.pop("lambda1")
+            if "z2" not in self.cfg.LOGITS:
+                self.val_params.pop("lambda2")
+            if "z3" not in self.cfg.LOGITS:
+                self.val_params.pop("lambda3")
+            if "z4" not in self.cfg.LOGITS:
+                self.val_params.pop("lambda4")
+
             # Use the init parameters from the cfg
             for param_name in self.val_params.keys():
                 if hasattr(self.cfg.HP_SEARCH.PARAMS, param_name):
@@ -1627,30 +1636,30 @@ class SeMoBridge(SimpleTrainer):
 
         param_names = []
 
-        # Check if any of z2, z3, z4 are in self.cfg.TEST.LOGITS
+        # Check if any of z2, z3, z4 are in self.cfg.LOGITS
         if (
-            "z2" in self.cfg.TEST.LOGITS
-            or "z3" in self.cfg.TEST.LOGITS
-            or "z4" in self.cfg.TEST.LOGITS
+            "z2" in self.cfg.LOGITS
+            or "z3" in self.cfg.LOGITS
+            or "z4" in self.cfg.LOGITS
         ):
             param_names.append("smoothness")
 
-        if "z1" in self.cfg.TEST.LOGITS:
+        if "z1" in self.cfg.LOGITS:
             param_names.append("alpha")
-        if "z2" in self.cfg.TEST.LOGITS:
+        if "z2" in self.cfg.LOGITS:
             param_names.append("beta")
-        if "z3" in self.cfg.TEST.LOGITS:
+        if "z3" in self.cfg.LOGITS:
             param_names.append("gamma")
-        if "z4" in self.cfg.TEST.LOGITS:
+        if "z4" in self.cfg.LOGITS:
             param_names.append("delta")
 
-        if "z1" in self.cfg.TEST.LOGITS:
+        if "z1" in self.cfg.LOGITS:
             param_names.append("lambda1")
-        if "z2" in self.cfg.TEST.LOGITS:
+        if "z2" in self.cfg.LOGITS:
             param_names.append("lambda2")
-        if "z3" in self.cfg.TEST.LOGITS:
+        if "z3" in self.cfg.LOGITS:
             param_names.append("lambda3")
-        if "z4" in self.cfg.TEST.LOGITS:
+        if "z4" in self.cfg.LOGITS:
             param_names.append("lambda4")
 
         # param_names = [

@@ -219,7 +219,7 @@ def extend_cfg(cfg):
 
     cfg.OPTIM.PATIENCE = 0  # patience for early stopping
 
-    cfg.TEST.LOGITS = ["z1", "z2", "z3", "z4"]  # logits to use for evaluation
+    cfg.LOGITS = ["z1", "z2", "z3", "z4"]  # logits to use for evaluation
     cfg.TEST.EVALUATOR = "ClassificationGPU"
     cfg.TEST.FINAL_MODEL = "best_val"
 
