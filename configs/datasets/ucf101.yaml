@@ -38,7 +38,6 @@ TEST:
 #     lambda4:
 #       INIT: 15.0
 
-
 INPUT:
   #AUGMENT_EPOCHS: 1 # Enable augmentation for this dataset
   #AUGMENT_TRANSFORMS: ["horizontal_flip"]

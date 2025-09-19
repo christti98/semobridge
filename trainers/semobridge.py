@@ -82,7 +82,7 @@ class SeMoBridgeModel(nn.Module):
                 torch.zeros(num_classes, text_projection.shape[0], dtype=dtype)
             )
 
-    def forward(self, image_embeds, use_class_bias=True, use_untrained=False):
+    def forward(self, image_embeds, use_class_bias=True, use_untrained=False, class_bias=None):
         # image_embeds shape: [num_classes, num_shots, projection_dims]
         # self.inv_text shape: [projection_dims, projection_dims]
 
@@ -95,11 +95,15 @@ class SeMoBridgeModel(nn.Module):
         else:
             image_emb_proj = torch.matmul(image_embeds, self.inv_text_untrained)
 
-        if self.cfg.TRAINER.SEMOBRIDGE.CSB and use_class_bias and not use_untrained:
-            # Vectorized bias addition: class_bias [C, D] → broadcast to [C, K, D]
-            image_emb_proj = image_emb_proj + self.class_bias.unsqueeze(
-                1
-            )  # [C, 1, D] + [C, K, D]
+        if self.cfg.TRAINER.SEMOBRIDGE.CSB and not use_untrained:
+            if not use_class_bias:
+                # Use blended class bias vectors provided as input
+                image_emb_proj = image_emb_proj + class_bias  # [N, D] + [N, D] 
+            else:
+                # Vectorized bias addition: class_bias [C, D] → broadcast to [C, K, D]
+                image_emb_proj = image_emb_proj + self.class_bias.unsqueeze(
+                    1
+                )  # [C, 1, D] + [C, K, D]
 
         # Normalize
         image_emb_proj = image_emb_proj / image_emb_proj.norm(dim=-1, keepdim=True)
@@ -254,6 +258,18 @@ class SeMoBridge(SimpleTrainer):
                     print(f"Using {param_name} from cfg: {self.val_params[param_name]}")
 
             self.tfm = build_transform(self.cfg, is_train=True)
+
+            # Calculate CLIP accuracy on val and test sets
+            self.features.val_clip_labels = self.features.val_clip_logits.argmax(dim=1)
+            self.features.val_clip_acc = (
+                self.features.val_clip_labels == self.features.val_labels
+            ).float().mean().item() * 100.0
+            print(f"CLIP val accuracy: {self.features.val_clip_acc:.2f}%")
+            self.features.test_clip_labels = self.features.test_clip_logits.argmax(dim=1)
+            self.features.test_clip_acc = (
+                self.features.test_clip_labels == self.features.test_labels
+            ).float().mean().item() * 100.0
+            print(f"CLIP test accuracy: {self.features.test_clip_acc:.2f}%")
 
         # Remember the starting time (for computing the elapsed time)
         self.time_start = time.time()
@@ -457,14 +473,32 @@ class SeMoBridge(SimpleTrainer):
             final_prompts = self.semobridge.converted_projected_mean  # Shape [C, K, D]
             final_prompts_normed = F.normalize(final_prompts, dim=-1)
 
+            semobridge_logits = self.features.val_embeds_normed @ final_prompts_normed.T
+            # Set features.val_pseudo_logits to either self.features.val_clip_logits or semobridge_logits, depending on which has better accuracy
+            semobridge_labels = semobridge_logits.argmax(dim=1)
+            semobridge_acc = (
+                semobridge_labels == self.features.val_labels
+            ).float().mean().item() * 100.0
+            print(f"SeMoBridge val accuracy: {semobridge_acc:.2f}%")
+            if semobridge_acc >= self.features.val_clip_acc:
+                print("Using SeMoBridge pseudo labels for val set")
+                self.features.val_pseudo_logits = semobridge_logits
+            else:
+                print("Using CLIP pseudo labels for val set")
+                self.features.val_pseudo_logits = self.features.val_clip_logits
+
+            # Calculate blended class bias vectors for val set based on pseudo logits
+            pseudo_logits_soft = F.softmax(self.features.val_pseudo_logits, dim=1)
+            self.features.val_class_bias = pseudo_logits_soft @ self.semobridge.class_bias # [C, D]
+
+            # Bridge val embeds to text space
             val_embeds_converted_projected, val_embeds_converted_unprojected = (
-                self.semobridge(self.features.val_embeds, use_class_bias=False)
+                self.semobridge(self.features.val_embeds, use_class_bias=False, class_bias=self.features.val_class_bias)
             )
             val_embeds_converted_projected_normed = F.normalize(
                 val_embeds_converted_projected, dim=-1
             )
 
-            semobridge_logits = self.features.val_embeds_normed @ final_prompts_normed.T
             semobridge_conv_images_logits = (
                 val_embeds_converted_projected_normed
                 @ self.features.few_shot_embeds_mean_normed.T
@@ -1565,9 +1599,27 @@ class SeMoBridge(SimpleTrainer):
         print(f"CLIP's zero-shot accuracy: {clip_zs_accuracy:.2f}%")
 
         semobridge_logits = self.features.val_embeds_normed @ final_prompts_normed.T
+        # Set features.val_pseudo_logits to either self.features.val_clip_logits or semobridge_logits, depending on which has better accuracy
+        semobridge_labels = semobridge_logits.argmax(dim=1)
+        semobridge_acc = (
+            semobridge_labels == self.features.val_labels
+        ).float().mean().item() * 100.0
+        print(f"SeMoBridge val accuracy: {semobridge_acc:.2f}%")
+        if semobridge_acc >= self.features.val_clip_acc:
+            print("Using SeMoBridge pseudo labels for val set")
+            self.features.val_pseudo_logits = semobridge_logits
+            should_use_semobridge_pseudo_logits = True
+        else:
+            print("Using CLIP pseudo labels for val set")
+            self.features.val_pseudo_logits = self.features.val_clip_logits
+            should_use_semobridge_pseudo_logits = False
+
+        # Calculate blended class bias vectors for val set based on pseudo logits
+        pseudo_logits_soft = F.softmax(self.features.val_pseudo_logits, dim=1)
+        self.features.val_class_bias = pseudo_logits_soft @ self.semobridge.class_bias # [C, D]
 
         val_embeds_converted_projected, val_embeds_converted_unprojected = (
-            self.semobridge(self.features.val_embeds, use_class_bias=False)
+            self.semobridge(self.features.val_embeds, use_class_bias=False, class_bias=self.features.val_class_bias)
         )
         val_embeds_converted_projected_normed = F.normalize(
             val_embeds_converted_projected, dim=-1
@@ -1727,9 +1779,26 @@ class SeMoBridge(SimpleTrainer):
 
         # Process blended output with confidence
         print("Final test on test set with best settings:")
+
+        # Compare the test embeddings with text embeddings (vanilla CLIP)
+        semobridge_logits = self.features.test_embeds_normed @ final_prompts_normed.T
+
+        # Set features.test_pseudo_logits to either self.features.test_clip_logits or semobridge_logits, depending on which has better accuracy
+        semobridge_labels = semobridge_logits.argmax(dim=1)
+        if should_use_semobridge_pseudo_logits:
+            print("Using SeMoBridge pseudo labels for test set")
+            self.features.test_pseudo_logits = semobridge_logits
+        else:
+            print("Using CLIP pseudo labels for test set")
+            self.features.test_pseudo_logits = self.features.test_clip_logits
+
+        # Calculate blended class bias vectors for test set based on pseudo logits
+        pseudo_logits_soft = F.softmax(self.features.test_pseudo_logits, dim=1)
+        self.features.test_class_bias = pseudo_logits_soft @ self.semobridge.class_bias # [C, D]
+
         # Convert the test embeddings to text embeddings
         test_embeds_converted_projected, test_embeds_converted_unprojected = (
-            self.semobridge(self.features.test_embeds, use_class_bias=False)
+            self.semobridge(self.features.test_embeds, use_class_bias=False, class_bias=self.features.test_class_bias)
         )
 
         # Normalize embeds
@@ -1737,8 +1806,6 @@ class SeMoBridge(SimpleTrainer):
             test_embeds_converted_projected, dim=-1
         )
 
-        # Compare the test embeddings with text embeddings (vanilla CLIP)
-        semobridge_logits = self.features.test_embeds_normed @ final_prompts_normed.T
         semobridge_conv_images_logits = (
             test_embeds_converted_projected_normed
             @ self.features.few_shot_embeds_mean_normed.T

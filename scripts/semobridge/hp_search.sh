@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # custom config
-DATA=DATA
+DATA=/home/damilab/semobridge/DATA
 OUTPUT=OUTPUT
 TRAINER=SeMoBridge
 

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Set base directories
-DATA=DATA
+DATA=/home/damilab/semobridge/DATA
 OUTPUT=OUTPUT
 TRAINER=SeMoBridge
 

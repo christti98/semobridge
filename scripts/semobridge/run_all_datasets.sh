@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Set base directories
-DATA=DATA
+DATA=/home/damilab/semobridge/DATA
 OUTPUT=OUTPUT
 TRAINER=SeMoBridge
 
@@ -55,7 +55,7 @@ for DATASET_FILE in $DATASET_FILES; do
     for SHOTS in $SHOTS_LIST; do
         ALL_DONE=true
 
-        #for SEED in 1 2 3 4 5 6; do
+        #for SEED in 1; do
         for SEED in 1 2 3; do
         #for SEED in 1; do
             DIR=${OUTPUT}/${DATASET}/${TRAINER}/${CFG}_csb${CSB}/${SHOTS}shots/texts_${TEXTS}/seed${SEED}

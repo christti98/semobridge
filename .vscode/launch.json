@@ -1,0 +1,187 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug run_chris.py aircraft",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "/home/user/mumoop/BACKUP/run_chris.py",
+            "console": "integratedTerminal",
+            "args": "--dataset=fgvcaircraft --clip_model ViT-B/16 --dataset_path=/home/user/mumoop/BACKUP/dataset_loaders",
+            "python": "/home/user/anaconda3/envs/image-prompting/bin/python"
+        },
+        {
+            "name": "Develop MuMoOp flowers",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "train.py",
+            "console": "integratedTerminal",
+            "args": "--root ~/MuMoOp/DATA --seed 1 --trainer MuMoOp --dataset-config-file configs/datasets/oxford_flowers.yaml --config-file configs/trainers/MuMoOp/vit_b16_250ep.yaml --output-dir output/dev DATASET.NUM_SHOTS 16 TRAINER.MUMOOP.TEXTS cupl_full"
+        },
+        {
+            "name": "Develop MuMoOp eurosat",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "train.py",
+            "console": "integratedTerminal",
+            "args": "--root ~/MuMoOp/DATA --seed 1 --trainer MuMoOp --dataset-config-file configs/datasets/eurosat.yaml --config-file configs/trainers/MuMoOp/vit_b16_new22.yaml --output-dir output/dev DATASET.NUM_SHOTS 16 TRAINER.MUMOOP.TEXTS clip_ensemble,cupl_full"
+        },
+        {
+            "name": "Develop MuMoOp aircraft",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "train.py",
+            "console": "integratedTerminal",
+            "args": "--root ~/MuMoOp/DATA --seed 1 --trainer MuMoOp --dataset-config-file configs/datasets/fgvc_aircraft.yaml --config-file configs/trainers/MuMoOp/vit_b16_train7.yaml --output-dir output/dev DATASET.NUM_SHOTS 16 TRAINER.MUMOOP.TEXTS clip_ensemble,cupl_full"
+        },
+        {
+            "name": "Develop MuMoOp imagenet",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "train.py",
+            "console": "integratedTerminal",
+            "args": "--root ~/semobridge/DATA --seed 1 --trainer SeMoBridge --dataset-config-file configs/datasets/imagenet.yaml --config-file configs/trainers/SeMoBridge/vit_b16.yaml --output-dir output/dev DATASET.NUM_SHOTS 1 TRAINER.SEMOBRIDGE.TEXTS clip_ensemble,cupl_full"
+        },
+        {
+            "name": "dtd",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "train.py",
+            "console": "integratedTerminal",
+            "args": "--root ~/MuMoOp/DATA --seed 1 --trainer MuMoOp --dataset-config-file configs/datasets/dtd.yaml --config-file configs/trainers/MuMoOp/vit_b16_new22.yaml --output-dir output/dev DATASET.NUM_SHOTS 16 TRAINER.MUMOOP.TEXTS clip_ensemble,cupl_full_gpt-4.1-2025-04-14"
+        },
+        {
+            "name": "Develop MuMoOp caltech101 RN-50 notrain",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "train.py",
+            "console": "integratedTerminal",
+            "args": "--root ~/MuMoOp/DATA --seed 1 --no-train --trainer MuMoOp --dataset-config-file configs/datasets/caltech101.yaml --config-file configs/trainers/MuMoOp/rn50_final1.yaml --output-dir output/dev DATASET.NUM_SHOTS 16 TRAINER.MUMOOP.TEXTS clip_ensemble,cupl_full TRAINER.MUMOOP.CB True"
+        },
+        {
+            "name": "Develop MuMoOp caltech101 ViT-B/16",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "train.py",
+            "console": "integratedTerminal",
+            "args": "--root ~/MuMoOp/DATA --seed 1 --trainer MuMoOp --dataset-config-file configs/datasets/caltech101.yaml --config-file configs/trainers/MuMoOp/vit_b16.yaml --output-dir output/dev DATASET.NUM_SHOTS 16 TRAINER.MUMOOP.TEXTS clip_ensemble,cupl_full TRAINER.MUMOOP.CB True"
+        },
+        {
+            "name": "ldc_train",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "ldc_train.py",
+            "cwd": "LDC",
+            "console": "integratedTerminal",
+            "args": ""
+        },
+        {
+            "name": "diffusion",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "train.py",
+            "console": "integratedTerminal",
+            "args": "--root ~/MuMoOp/DATA --seed 1 --diffusion --trainer MuMoOp --dataset-config-file configs/datasets/oxford_pets.yaml --config-file configs/trainers/MuMoOp/vit_l14.yaml --output-dir output/dev DATASET.NUM_SHOTS 16 TRAINER.MUMOOP.TEXTS classname TRAINER.MUMOOP.CB True"
+        },
+        {
+            "name": "vis pets 1shots",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "train.py",
+            "console": "integratedTerminal",
+            "args": "--root ~/MuMoOp/DATA --seed 1 --vis --trainer MuMoOp --eval-only --load-epoch 5000 --dataset-config-file configs/datasets/oxford_pets.yaml --config-file configs/trainers/MuMoOp/vit_b16_submit3.yaml --model-dir OUTPUT/oxford_pets/MuMoOp/vit_b16_submit3_cbTrue/1shots/texts_clip_ensemble,cupl_semobridge/seed1 --output-dir OUTPUT/oxford_pets/MuMoOp/vit_b16_submit3_cbTrue/1shots/texts_clip_ensemble,cupl_semobridge/seed1 DATASET.NUM_SHOTS 1 TRAINER.MUMOOP.TEXTS clip_ensemble,cupl_semobridge TRAINER.MUMOOP.CB True"
+        },
+        {
+            "name": "vis flowers 1shots",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "train.py",
+            "console": "integratedTerminal",
+            "args": "--root ~/MuMoOp/DATA --seed 1 --vis --trainer MuMoOp --eval-only  --dataset-config-file configs/datasets/oxford_flowers.yaml --config-file configs/trainers/MuMoOp/rn50_submit3.yaml --model-dir OUTPUT/oxford_flowers/MuMoOp/rn50_submit3_cbTrue/1shots/texts_clip_ensemble,cupl_semobridge/seed1 --output-dir OUTPUT/oxford_flowers/MuMoOp/rn50_submit3_cbTrue/1shots/texts_clip_ensemble,cupl_semobridge/seed1 DATASET.NUM_SHOTS 1 TRAINER.MUMOOP.TEXTS clip_ensemble,cupl_semobridge TRAINER.MUMOOP.CB True"
+        },
+        {
+            "name": "vis pets 8shots",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "train.py",
+            "console": "integratedTerminal",
+            "args": "--root ~/MuMoOp/DATA --seed 1 --vis --trainer MuMoOp --eval-only --load-epoch 5000 --dataset-config-file configs/datasets/oxford_pets.yaml --config-file configs/trainers/MuMoOp/vit_b16_submit3.yaml --model-dir OUTPUT/oxford_pets/MuMoOp/vit_b16_submit3_cbTrue/8shots/texts_clip_ensemble,cupl_semobridge/seed1 --output-dir OUTPUT/oxford_pets/MuMoOp/vit_b16_submit3_cbTrue/8shots/texts_clip_ensemble,cupl_semobridge/seed1 DATASET.NUM_SHOTS 8 TRAINER.MUMOOP.TEXTS clip_ensemble,cupl_semobridge TRAINER.MUMOOP.CB True"
+        },
+        {
+            "name": "vis pets 16shots",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "train.py",
+            "console": "integratedTerminal",
+            "args": "--root ~/MuMoOp/DATA --seed 1 --vis --trainer MuMoOp --eval-only --load-epoch 5000 --dataset-config-file configs/datasets/oxford_pets.yaml --config-file configs/trainers/MuMoOp/vit_b16_submit3.yaml --model-dir OUTPUT/oxford_pets/MuMoOp/vit_b16_submit3_cbTrue/16shots/texts_clip_ensemble,cupl_semobridge/seed1 --output-dir OUTPUT/oxford_pets/MuMoOp/vit_b16_submit3_cbTrue/16shots/texts_clip_ensemble,cupl_semobridge/seed1 DATASET.NUM_SHOTS 16 TRAINER.MUMOOP.TEXTS clip_ensemble,cupl_semobridge TRAINER.MUMOOP.CB True"
+        },
+        {
+            "name": "vis flowers 1shots",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "train.py",
+            "console": "integratedTerminal",
+            "args": "--root ~/MuMoOp/DATA --seed 1 --vis --trainer MuMoOp --eval-only --load-epoch 5000 --dataset-config-file configs/datasets/oxford_flowers.yaml --config-file configs/trainers/MuMoOp/rn50_final21.yaml --model-dir OUTPUT/oxford_flowers/MuMoOp/rn50_final21_cbTrue/1shots/texts_clip_ensemble,cupl_full/seed1 --output-dir OUTPUT/oxford_flowers/MuMoOp/rn50_final21_cbTrue/1shots/texts_clip_ensemble,cupl_full/seed1 DATASET.NUM_SHOTS 1 TRAINER.MUMOOP.TEXTS clip_ensemble,cupl_full TRAINER.MUMOOP.CB True"
+        },
+        {
+            "name": "vis imagenet 16shots",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "train.py",
+            "console": "integratedTerminal",
+            "args": "--root ~/MuMoOp/DATA --seed 1 --vis --trainer MuMoOp --eval-only --load-epoch 5000 --dataset-config-file configs/datasets/imagenet.yaml --config-file configs/trainers/MuMoOp/vit_b16_submit3.yaml --model-dir OUTPUT/imagenet/MuMoOp/vit_b16_submit3_cbTrue/16shots/texts_clip_ensemble,cupl_semobridge/seed1 --output-dir OUTPUT/imagenet/MuMoOp/vit_b16_submit3_cbTrue/16shots/texts_clip_ensemble,cupl_semobridge/seed1 DATASET.NUM_SHOTS 16 TRAINER.MUMOOP.TEXTS clip_ensemble,cupl_semobridge TRAINER.MUMOOP.CB True"
+        },
+        {
+            "name": "vis imagenet 1shots",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "train.py",
+            "console": "integratedTerminal",
+            "args": "--root ~/MuMoOp/DATA --seed 1 --vis --trainer MuMoOp --eval-only --load-epoch 5000 --dataset-config-file configs/datasets/imagenet.yaml --config-file configs/trainers/MuMoOp/vit_b16_submit3.yaml --model-dir OUTPUT/imagenet/MuMoOp/vit_b16_submit3_cbTrue/1shots/texts_clip_ensemble,cupl_semobridge/seed1 --output-dir OUTPUT/imagenet/MuMoOp/vit_b16_submit3_cbTrue/1shots/texts_clip_ensemble,cupl_semobridge/seed1 DATASET.NUM_SHOTS 1 TRAINER.MUMOOP.TEXTS clip_ensemble,cupl_semobridge TRAINER.MUMOOP.CB True"
+        },
+        {
+            "name": "imagenet-a 16shots",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "train.py",
+            "console": "integratedTerminal",
+            "args": "--root ~/MuMoOp/DATA --seed 1 --trainer MuMoOp --eval-only --load-epoch 4000 --dataset-config-file configs/datasets/imagenet_a.yaml --config-file configs/trainers/MuMoOp/rn50_final21.yaml --model-dir OUTPUT/imagenet/MuMoOp/rn50_final21_cbTrue/16shots/texts_clip_ensemble,cupl_full/seed1 --output-dir OUTPUT/imagenet-a/MuMoOp/rn50_final21_cbTrue/16shots/texts_clip_ensemble,cupl_full/seed1 DATASET.NUM_SHOTS 16 TRAINER.MUMOOP.TEXTS clip_ensemble,cupl_full TRAINER.MUMOOP.CB True"
+        },
+        {
+            "name": "ood imagenet-a",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "train.py",
+            "console": "integratedTerminal",
+            "args": "--root ~/MuMoOp/DATA --seed 1 --vis --trainer MuMoOp --eval-only --load-epoch 4000 --dataset-config-file configs/datasets/imagenet.yaml --config-file configs/trainers/MuMoOp/vit_b16.yaml --model-dir OUTPUT/imagenet/MuMoOp/vit_b16_cbTrue/16shots/texts_clip_ensemble,cupl_full/seed1 --output-dir OUTPUT/imagenet/MuMoOp/vit_b16_cbTrue/16shots/texts_clip_ensemble,cupl_full/seed1 DATASET.NUM_SHOTS 16 TRAINER.MUMOOP.TEXTS clip_ensemble,cupl_full TRAINER.MUMOOP.CB True"
+        },
+        {
+            "name": "imagenet-a",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "train.py",
+            "console": "integratedTerminal",
+            "args": "--root ~/MuMoOp/DATA --seed 1 --trainer MuMoOp --eval-only --load-epoch 1500 --dataset-config-file configs/datasets/imagenet_a.yaml --config-file configs/trainers/MuMoOp/rn50_new15.yaml --model-dir OUTPUT/imagenet/MuMoOp/rn50_new15_cbTrue/16shots/texts_clip_ensemble,cupl_full/seed1 --output-dir OUTPUT/imagenet/MuMoOp/rn50_new15/16shots/texts_clip_ensemble,cupl_full/seed1 DATASET.NUM_SHOTS 16 TRAINER.MUMOOP.TEXTS clip_ensemble,cupl_full TRAINER.MUMOOP.CB True"
+        },
+        {
+            "name": "draw_curves",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "draw_curves.py",
+            "console": "integratedTerminal",
+            "args": ""
+        },
+        {
+            "name": "ape imagenet_a 16 shots",
+            "cwd": "APE",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "main.py",
+            "console": "integratedTerminal",
+            "args": "--config configs/imagenet_a.yaml --shot 16"
+        }
+    ]
+}
