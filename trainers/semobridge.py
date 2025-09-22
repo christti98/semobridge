@@ -240,10 +240,14 @@ class SeMoBridge(SimpleTrainer):
                 "beta": 1.0,
                 "gamma": 1.0,
                 "delta": 1.0,
+                "epsilon": 1.0,
+                "zeta": 1.0,
                 "lambda1": 0.5,
                 "lambda2": 0.75,
                 "lambda3": 0.1,
                 "lambda4": 0.1,
+                "lambda5": 0.1,
+                "lambda6": 0.1,
             }
             if "z1" not in self.cfg.LOGITS:
                 self.val_params.pop("lambda1")
@@ -253,6 +257,10 @@ class SeMoBridge(SimpleTrainer):
                 self.val_params.pop("lambda3")
             if "z4" not in self.cfg.LOGITS:
                 self.val_params.pop("lambda4")
+            if "z5" not in self.cfg.LOGITS:
+                self.val_params.pop("lambda5")
+            if "z6" not in self.cfg.LOGITS:
+                self.val_params.pop("lambda6")
 
             # Use the init parameters from the cfg
             for param_name in self.val_params.keys():
@@ -481,6 +489,14 @@ class SeMoBridge(SimpleTrainer):
             semobridge_conv_prompt_logits = (
                 val_embeds_converted_projected_normed @ self.final_prompts_normed.T
             )
+            semobridge_conv_text_logits = (
+                val_embeds_converted_projected_normed
+                @ self.features.text_projected_normed.T
+            )
+            direct_intra_modal_logits = (
+                self.features.val_embeds_normed
+                @ self.features.few_shot_embeds_mean_normed.T
+            )
 
             val_logits = self.blend_logits(
                 self.features.few_shot_divergence,
@@ -488,6 +504,8 @@ class SeMoBridge(SimpleTrainer):
                 semobridge_logits,
                 semobridge_conv_images_logits,
                 semobridge_conv_prompt_logits,
+                semobridge_conv_text_logits,
+                direct_intra_modal_logits,
                 self.val_params,
             )
 
@@ -507,6 +525,12 @@ class SeMoBridge(SimpleTrainer):
                 )
 
         if meet_checkpoint_freq or last_epoch:
+            self.save_model(
+                    self.epoch,
+                    self.output_dir,
+                    val_result=None,
+                    model_name="model-best.pth.tar",
+                )
             self.save_model(self.epoch, self.output_dir)
 
         if self.loss < self.best_loss:
@@ -1591,6 +1615,10 @@ class SeMoBridge(SimpleTrainer):
             val_embeds_converted_projected_normed @ final_prompts_normed.T
         )
 
+        semobridge_conv_text_logits = (
+             val_embeds_converted_projected_normed @ self.features.text_projected_normed.T
+        )
+
         direct_intra_modal_logits = (
             self.features.val_embeds_normed
             @ self.features.few_shot_embeds_mean_normed.T
@@ -1614,6 +1642,11 @@ class SeMoBridge(SimpleTrainer):
             semobridge_conv_prompt_logits.argmax(dim=1) == self.features.val_labels
         ).float().mean().item() * 100.0
         print(f"fhat^proj <> Fhat^proj: {acc:.2f}%")
+
+        acc = (
+            semobridge_conv_text_logits.argmax(dim=1) == self.features.val_labels
+        ).float().mean().item() * 100.0
+        print(f"fhat^proj <> T^proj: {acc:.2f}%")
 
         results = None
 
@@ -1641,6 +1674,8 @@ class SeMoBridge(SimpleTrainer):
             "z2" in self.cfg.LOGITS
             or "z3" in self.cfg.LOGITS
             or "z4" in self.cfg.LOGITS
+            or "z5" in self.cfg.LOGITS
+            or "z6" in self.cfg.LOGITS
         ):
             param_names.append("smoothness")
 
@@ -1652,6 +1687,10 @@ class SeMoBridge(SimpleTrainer):
             param_names.append("gamma")
         if "z4" in self.cfg.LOGITS:
             param_names.append("delta")
+        if "z5" in self.cfg.LOGITS:
+            param_names.append("epsilon")
+        if "z6" in self.cfg.LOGITS:
+            param_names.append("zeta")
 
         if "z1" in self.cfg.LOGITS:
             param_names.append("lambda1")
@@ -1661,6 +1700,10 @@ class SeMoBridge(SimpleTrainer):
             param_names.append("lambda3")
         if "z4" in self.cfg.LOGITS:
             param_names.append("lambda4")
+        if "z5" in self.cfg.LOGITS:
+            param_names.append("lambda5")
+        if "z6" in self.cfg.LOGITS:
+            param_names.append("lambda6")
 
         # param_names = [
         #     "smoothness",
@@ -1704,6 +1747,8 @@ class SeMoBridge(SimpleTrainer):
                     semobridge_logits,
                     semobridge_conv_images_logits,
                     semobridge_conv_prompt_logits,
+                    semobridge_conv_text_logits,
+                    direct_intra_modal_logits,
                     params,
                 )
                 pred = blended_logits.argmax(dim=1)
@@ -1755,6 +1800,13 @@ class SeMoBridge(SimpleTrainer):
         semobridge_conv_prompt_logits = (
             test_embeds_converted_projected_normed @ final_prompts_normed.T
         )
+        semobridge_conv_text_logits = (
+             test_embeds_converted_projected_normed @ self.features.text_projected_normed.T
+        )
+        direct_intra_modal_logits = (
+            self.features.test_embeds_normed
+            @ self.features.few_shot_embeds_mean_normed.T
+        )
 
         final_logits = self.blend_logits(
             self.features.few_shot_divergence,
@@ -1762,6 +1814,8 @@ class SeMoBridge(SimpleTrainer):
             semobridge_logits,
             semobridge_conv_images_logits,
             semobridge_conv_prompt_logits,
+            semobridge_conv_text_logits,
+            direct_intra_modal_logits,
             best_params,
         )
 
@@ -1782,6 +1836,8 @@ class SeMoBridge(SimpleTrainer):
         semobridge_logits,
         semobridge_conv_images_logits,
         semobridge_conv_prompt_logits,
+        semobridge_conv_text_logits,
+        direct_intra_modal_logits,
         params,
     ):
         """Blend the logits from CLIP and Semobridge."""
@@ -1812,6 +1868,16 @@ class SeMoBridge(SimpleTrainer):
                 (-1)
                 * (params["delta"] - params["delta"] * semobridge_conv_prompt_logits)
             ).exp() @ soft_few_shot_labels
+        if "epsilon" in params.keys():
+            semobridge_conv_text_logits_exp = (
+                (-1)
+                * (params["epsilon"] - params["epsilon"] * semobridge_conv_text_logits)
+            ).exp()
+        if "zeta" in params.keys():
+            direct_intra_modal_logits_exp = (
+                (-1)
+                * (params["zeta"] - params["zeta"] * direct_intra_modal_logits)
+            ).exp() @ soft_few_shot_labels
 
         # Blend logits batch-wise
         blended_logits = torch.zeros(
@@ -1828,6 +1894,10 @@ class SeMoBridge(SimpleTrainer):
             blended_logits += params["lambda3"] * semobridge_conv_images_logits_exp
         if "lambda4" in params.keys():
             blended_logits += params["lambda4"] * semobridge_conv_prompt_logits_exp
+        if "lambda5" in params.keys():
+            blended_logits += params["lambda5"] * semobridge_conv_text_logits_exp
+        if "lambda6" in params.keys():
+            blended_logits += params["lambda6"] * direct_intra_modal_logits_exp
 
         return blended_logits
 
@@ -1911,6 +1981,11 @@ class SeMoBridge(SimpleTrainer):
                 'from "{}" (epoch = {})'.format(name, model_path, epoch)
             )
             # set strict=False
+
+            if self.cfg.DATASET.SUBSAMPLE_CLASSES == "new":
+                # Remove CSB
+                if "class_bias" in state_dict:
+                    del state_dict["class_bias"]
 
             self._models[name].load_state_dict(state_dict, strict=False)
 

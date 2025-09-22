@@ -70,6 +70,7 @@ def parse_function(*metrics, directory="", args=None, end_signal=None):
     outputs = []
 
     for subdir in subdirs:
+        print(f"Processing {subdir}")
         fpath = osp.join(directory, subdir, "log.txt")
         assert check_isfile(fpath)
         good_to_go = False

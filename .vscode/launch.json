@@ -5,12 +5,12 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python Debugger: Current File with Arguments",
+            "name": "ImageNet 16 shot vis",
             "type": "debugpy",
             "request": "launch",
-            "program": "${file}",
+            "program": "python",
             "console": "integratedTerminal",
-            "args": "${command:pickArgs}"
+            "args": "train.py --root DATA --seed 1 --trainer SeMoBridge --dataset-config-file configs/datasets/imagenet.yaml --config-file configs/trainers/SeMoBridge/vit_b16.yaml --output-dir output/vis --vis TRAINER.SEMOBRIDGE.TEXTS clip_ensemble,cupl_full TRAINER.SEMOBRIDGE.CSB True DATASET.NUM_SHOTS 16"
         }
     ]
 }

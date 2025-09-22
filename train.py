@@ -219,7 +219,7 @@ def extend_cfg(cfg):
 
     cfg.OPTIM.PATIENCE = 0  # patience for early stopping
 
-    cfg.LOGITS = ["z1", "z2", "z3", "z4"]  # logits to use for evaluation
+    cfg.LOGITS = ["z1", "z2", "z3", "z4", "z5", "z6"]  # logits to use for evaluation
     cfg.TEST.EVALUATOR = "ClassificationGPU"
     cfg.TEST.FINAL_MODEL = "best_val"
 
@@ -254,6 +254,16 @@ def extend_cfg(cfg):
     cfg.HP_SEARCH.PARAMS["delta"].MAX = 10.0
     cfg.HP_SEARCH.PARAMS["delta"].INIT = 1.0
 
+    cfg.HP_SEARCH.PARAMS["epsilon"] = CN()
+    cfg.HP_SEARCH.PARAMS["epsilon"].START = 0.0
+    cfg.HP_SEARCH.PARAMS["epsilon"].MAX = 10.0
+    cfg.HP_SEARCH.PARAMS["epsilon"].INIT = 1.0
+
+    cfg.HP_SEARCH.PARAMS["zeta"] = CN()
+    cfg.HP_SEARCH.PARAMS["zeta"].START = 0.0
+    cfg.HP_SEARCH.PARAMS["zeta"].MAX = 10.0
+    cfg.HP_SEARCH.PARAMS["zeta"].INIT = 1.0
+
     cfg.HP_SEARCH.PARAMS["lambda1"] = CN()
     cfg.HP_SEARCH.PARAMS["lambda1"].START = 0.0
     cfg.HP_SEARCH.PARAMS["lambda1"].MAX = 1.0
@@ -273,6 +283,16 @@ def extend_cfg(cfg):
     cfg.HP_SEARCH.PARAMS["lambda4"].START = 0.0
     cfg.HP_SEARCH.PARAMS["lambda4"].MAX = 1.0
     cfg.HP_SEARCH.PARAMS["lambda4"].INIT = 0.1
+
+    cfg.HP_SEARCH.PARAMS["lambda5"] = CN()
+    cfg.HP_SEARCH.PARAMS["lambda5"].START = 0.0
+    cfg.HP_SEARCH.PARAMS["lambda5"].MAX = 1.0
+    cfg.HP_SEARCH.PARAMS["lambda5"].INIT = 0.1
+
+    cfg.HP_SEARCH.PARAMS["lambda6"] = CN()
+    cfg.HP_SEARCH.PARAMS["lambda6"].START = 0.0
+    cfg.HP_SEARCH.PARAMS["lambda6"].MAX = 1.0
+    cfg.HP_SEARCH.PARAMS["lambda6"].INIT = 0.1
 
 
 def setup_cfg(args):

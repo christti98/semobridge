@@ -352,6 +352,11 @@ class FeatureExtractor:
         if not osp.exists(backbone_dir):
             os.makedirs(backbone_dir)
         dataset_dir = osp.join(backbone_dir, cfg.DATASET.DIRECTORY)
+        if cfg.DATASET.SUBSAMPLE_CLASSES != "all":
+            dataset_dir = osp.join(
+                dataset_dir, f"subsample_{cfg.DATASET.SUBSAMPLE_CLASSES}"
+            )
+
         if not osp.exists(dataset_dir):
             os.makedirs(dataset_dir)
 
@@ -598,7 +603,7 @@ class FeatureExtractor:
         del self.text_projection
         del self.text_projected
         del self.text_encoded
-        del self.text_projected_normed
+        #del self.text_projected_normed
         del self.text_encoded_normed
         del self.few_shot_embeds
         del self.few_shot_embeds_flat
