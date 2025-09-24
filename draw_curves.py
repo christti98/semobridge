@@ -6,6 +6,7 @@ import plotly.graph_objs as go
 from plotly.colors import qualitative
 
 # === CONFIGURATION ===
+
 csv_path = "Accuracy SeMoBridge - RN-50 FINAL.csv"
 save_dir = "main_curves"
 os.makedirs(save_dir, exist_ok=True)
@@ -46,19 +47,33 @@ tick_map = {0: 0, 1: 0.2, 2: 1.2, 4: 2.2, 8: 3.2, 16: 4.2}
 # Define methods as a dictionary with their attributes (name, type, color, symbol)
 methods_dict = {
     # TRAINING-FREE METHODS
-    "CLIP zero-shot": {"type": "training-free", "color": "#6CC557", "symbol": "cross"},
+    #"CLIP zero-shot": {"type": "training-free", "color": "#6CC557", "symbol": "cross"},
     "Tip-Adapter": {"type": "training-free", "color": "#F9A800", "symbol": "circle"},
-    "Tip-X": {"type": "training-free", "color": "#FF6600", "symbol": "circle"},
+    #"Tip-X": {"type": "training-free", "color": "#FF6600", "symbol": "circle"},
     "APE": {"type": "training-free", "color": "#4E95D9", "symbol": "circle"},
-    "SeMoBridge": {"type": "training-free", "color": "#87218F", "symbol": "star"},
+    "SeMoBridge": {"type": "training-free", "color": "#87218F", "symbol": "circle"},
     # TRAINING METHODS
-    "CoOp": {"type": "training", "color": "#6CC557", "symbol": "circle"},
+    #"CoOp": {"type": "training", "color": "#6CC557", "symbol": "circle"},
     "CLIP-Adapter": {"type": "training", "color": "#B49250", "symbol": "circle"},
     "Tip-Adapter-F": {"type": "training", "color": "#F9A800", "symbol": "circle"},
     "APE-T": {"type": "training", "color": "#4E95D9", "symbol": "circle"},
+    "CLIP-LoRA": {"type": "training", "color": "#4EB4D9", "symbol": "circle"},
     "LDC": {"type": "training", "color": "#38DFAA", "symbol": "circle"},
-    "SeMoBridge-T": {"type": "training", "color": "#87218F", "symbol": "star"},
+    #"2SFS": {"type": "training", "color": "#A6A600", "symbol": "circle"},
+    "PromptSRC": {"type": "training", "color": "#D9388A", "symbol": "circle"},
+    "SkipT": {"type": "training", "color": "#2E2CC7", "symbol": "circle"},
+    "SeMoBridge-T": {"type": "training", "color": "#87218F", "symbol": "circle"},
 }
+
+# Make color into rgba with alpha 0.5 for non-SeMoBridge methods
+for method, properties in methods_dict.items():
+    if "SeMoBridge" not in method:
+        color = properties["color"]
+        if color.startswith("#") and len(color) == 7:
+            r = int(color[1:3], 16)
+            g = int(color[3:5], 16)
+            b = int(color[5:7], 16)
+            properties["color"] = f"rgba({r},{g},{b},0.6)"
 
 
 # Helper to extract numeric accuracy
@@ -85,43 +100,14 @@ def plot_for_architecture_and_method(
     ]
 
     if average:
-        # Calculate the average accuracy for each shot across all datasets
+        # Get number from AVERAGE ACCURACY column
         for method in methods_filtered:
-            avg_scores = {shot: [] for shot in shot_ticks}
-
-            for dataset in datasets:
-                df = raw[raw["Method"] == method].copy()
-                df["Score"] = df[dataset].apply(extract_score)
-
-                x = df["Shots"].to_numpy(dtype=float)
-                y = df["Score"].to_numpy(dtype=float)
-                valid = ~np.isnan(x) & ~np.isnan(y)
-
-                if not np.any(valid):
-                    continue
-
-                x, y = x[valid], y[valid]
-
-                # Append the valid accuracy for each shot to the respective shot value
-                for i, shot in enumerate(x):
-                    if shot in avg_scores:
-                        avg_scores[shot].append(y[i])
-
-            # Now calculate the average accuracy for each shot value across datasets
-            avg_y = []
-            for shot in shot_ticks:
-                shot_scores = avg_scores[shot]
-                if len(shot_scores) > 0:
-                    avg_y.append(
-                        np.nanmean(shot_scores)
-                    )  # Calculate mean while ignoring NaNs
-                else:
-                    avg_y.append(np.nan)  # If no valid scores, append NaN
-
-            avg_y = np.array(avg_y)
+            avg_scores = raw[raw["Method"] == method]["AVERAGE ACCURACY"].apply(extract_score)
+            # add nan to the beginning
+            avg_scores = np.concatenate(([np.nan], avg_scores.to_numpy(dtype=float)))
 
             # Only plot if there's at least one valid average value
-            if np.all(np.isnan(avg_y)):
+            if np.all(np.isnan(avg_scores)):
                 continue  # Skip if all values are NaN
 
             # Replace with pseudo-logarithmic mapping
@@ -130,15 +116,17 @@ def plot_for_architecture_and_method(
             fig.add_trace(
                 go.Scatter(
                     x=avg_x,
-                    y=avg_y,
+                    y=avg_scores,
                     mode="lines+markers" if len(avg_x) > 1 else "markers",
                     name=f"{method}",
                     marker=dict(
                         color=methods_dict[method]["color"],
                         size=18,
                         symbol=methods_dict[method]["symbol"],
+                        # Add white outline if it is SeMoBridge
+                        line=dict(color="white", width=2 if "SeMoBridge" in method else 0)
                     ),
-                    line=dict(color=methods_dict[method]["color"], width=4),
+                    line=dict(color=methods_dict[method]["color"], width=3),
                 )
             )
     else:
@@ -174,8 +162,10 @@ def plot_for_architecture_and_method(
                         color=color,
                         size=18,
                         symbol=symbol,
+                        # Add white outline if it is SeMoBridge
+                        line=dict(color="white", width=2 if "SeMoBridge" in method else 0)
                     ),
-                    line=dict(color=color, width=4),
+                    line=dict(color=color, width=3),
                 )
             )
 
@@ -234,6 +224,10 @@ def plot_for_architecture_and_method(
             xanchor="right",
             yanchor="bottom",
             traceorder="reversed",  # Invert the order of the methods in the legend
+            # smaller legend
+            font=dict(size=22, family="Times New Roman"),
+            # background opacity
+            bgcolor="rgba(255, 255, 255, 0.75)",
         ),
         margin=dict(l=50, r=15, t=75, b=40),
         font=dict(size=30, family="Times New Roman"),

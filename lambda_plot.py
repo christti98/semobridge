@@ -21,7 +21,7 @@ trace_it = go.Scatter(
     y=lambda_it_acc,
     mode="lines+markers",
     name=r"$\Huge\lambda_\mathrm{it}$",
-    line=dict(color="rgba(128, 0, 128, 0.8)", width=6),
+    line=dict(color="rgba(249, 168, 0, 0.8)", width=6),
     marker=dict(size=20),
 )
 trace_c = go.Scatter(
@@ -29,7 +29,7 @@ trace_c = go.Scatter(
     y=lambda_c_acc,
     mode="lines+markers",
     name=r"$\Huge\lambda_\mathrm{c}$",
-    line=dict(color="rgba(139, 0, 0, 0.8)", width=6),
+    line=dict(color="rgba(78, 149, 217, 0.8)", width=6),
     marker=dict(size=20),
 )
 
@@ -38,7 +38,7 @@ trace_b = go.Scatter(
     y=lambda_b_acc,
     mode="lines+markers",
     name=r"$\Huge\lambda_\mathrm{b}$",
-    line=dict(color="rgba(128, 128, 0, 0.8)", width=6),
+    line=dict(color="rgba(56, 223, 170, 0.8)", width=6),
     marker=dict(size=20),
 )
 
@@ -77,7 +77,7 @@ layout_combined = go.Layout(
     ),
     plot_bgcolor="white",
     font=dict(size=36, family="Times New Roman", color="black"),
-    margin=dict(l=5, r=2, t=40, b=120),
+    margin=dict(l=5, r=2, t=5, b=120),
 )
 
 fig_combined = go.Figure(data=[trace_it, trace_c, trace_b], layout=layout_combined)

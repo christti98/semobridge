@@ -581,6 +581,299 @@ class SeMoBridge(SimpleTrainer):
 
         return accuracy
 
+    def figure_cosine_similarity_histogram(self):
+        save_path = os.path.join(
+            "preprocessed",
+            f"{self.cfg.MODEL.BACKBONE.NAME.replace("/", "")}_{self.cfg.TRAINER.SEMOBRIDGE.PREC}",
+            self.cfg.DATASET.DIRECTORY,
+            f"aphotoofa.pt",
+        )
+        if not os.path.exists(save_path):
+            print(f"File {save_path} does not exist, embedding...")
+            # We need to load CLIP for this
+            self.features.load_clip_if_not_loaded()
+            texts = self.features.load_class_text_prompts("aphotoofa")
+            text_projected, text_projected_normed, text_encoded, text_encoded_normed = (
+                self.features.embed_class_text_prompts(texts)
+            )
+            torch.save(
+                [
+                    text_projected,
+                    text_projected_normed,
+                    text_encoded,
+                    text_encoded_normed,
+                ],
+                save_path,
+            )
+        else:
+            print(f"Loading {save_path}")
+            text_projected, text_projected_normed, text_encoded, text_encoded_normed = (
+                torch.load(save_path)
+            )
+        text_projected_clip_normed = F.normalize(text_projected, dim=-1)
+
+        # Create untrained bridged few-shot embeds
+        bridged_few_shot_embeds_untrained = self.semobridge(
+            self.features.few_shot_embeds, use_class_bias=True, use_untrained=True
+        )[0]
+        bridged_few_shot_embeds_untrained = bridged_few_shot_embeds_untrained.mean(
+            dim=1
+        )  # [C, D]
+        bridged_few_shot_embeds_untrained_normed = F.normalize(
+            bridged_few_shot_embeds_untrained, dim=-1
+        )
+        del bridged_few_shot_embeds_untrained
+
+        image_image_sims = (
+            self.features.few_shot_embeds_flat_normed @ self.features.few_shot_embeds_flat_normed.T
+        )
+        image_text_sims = self.features.few_shot_embeds_mean_normed @ text_projected_clip_normed.T
+        
+        # Delete unused variables to save memory
+        del text_encoded
+        del text_encoded_normed
+        del text_projected
+        del text_projected_clip_normed
+        del text_projected_normed
+        # del self.features.val_embeds
+        # del self.features.val_embeds_normed
+        # del self.features.val_clip_logits
+        # del self.features.valimg_fewshot_logits
+        # del self.features.test_embeds
+        del self.features.test_embeds_normed
+        del self.features.test_clip_logits
+        del self.features.test_labels
+        # del self.features.testimg_fewshot_logits
+        # del self.features.few_shot_embeds_flat
+        # del self.features.few_shot_embeds_mean
+        del self.features.few_shot_clip_logits
+        del self.features.few_shot_labels
+        del self.features.test_embeds
+        del self.features.val_clip_logits
+        del self.features.val_labels
+        self.features.clear_memory()
+        
+
+        # text_only = self.text_sims.flatten().cpu().numpy()
+        # image_only = self.image_sims.flatten().cpu().numpy()
+
+        #image_text_sims = self.features.few_shot_embeds_mean_normed @ text_projected_clip_normed.T
+
+        
+
+        unpaired_image_only = image_image_sims[
+            self.targets.unsqueeze(1) != self.targets.unsqueeze(0)
+        ]
+        unpaired_image_only = unpaired_image_only.flatten()
+        # also not the diagonal
+        paired_image_only = image_image_sims[
+            self.targets.unsqueeze(1) == self.targets.unsqueeze(0)
+        ]
+        paired_image_only = paired_image_only.flatten()
+
+        del image_image_sims
+
+    
+        unpaired_image_text = image_text_sims[
+            self.targets_single.unsqueeze(1) != self.targets_single.unsqueeze(0)
+        ]
+        unpaired_image_text = unpaired_image_text.flatten()
+        paired_image_text = image_text_sims[
+            self.targets_single.unsqueeze(1) == self.targets_single.unsqueeze(0)
+        ]
+        paired_image_text = paired_image_text.flatten()
+
+        del image_text_sims
+
+        
+
+        bridged_test_untrained_sims = self.features.few_shot_embeds_mean_normed @ (
+            bridged_few_shot_embeds_untrained_normed.T
+        )
+        unpaired_untrained_bridged_test = bridged_test_untrained_sims[
+            self.targets_single.unsqueeze(1) != self.targets_single.unsqueeze(0)
+        ]
+        unpaired_untrained_bridged_test = unpaired_untrained_bridged_test.flatten()
+        paired_untrained_bridged_test = bridged_test_untrained_sims[
+            self.targets_single.unsqueeze(1) == self.targets_single.unsqueeze(0)
+        ]
+        paired_untrained_bridged_test = paired_untrained_bridged_test.flatten()
+
+        del bridged_test_untrained_sims
+
+        # Normalize so that lowest sim is 0, highest is 1
+        def normalize_similarities(sims):
+            sims = sims
+            min_sim = sims.min()
+            max_sim = sims.max()
+            normalized_sims = (sims - min_sim) / (max_sim - min_sim)
+            return normalized_sims
+        
+        # unpaired_image_only = normalize_similarities(unpaired_image_only)
+        # paired_image_only = normalize_similarities(paired_image_only)
+        # unpaired_image_text = normalize_similarities(unpaired_image_text)
+        # paired_image_text = normalize_similarities(paired_image_text)
+        # unpaired_untrained_bridged_test = normalize_similarities(unpaired_untrained_bridged_test)
+        # paired_untrained_bridged_test = normalize_similarities(paired_untrained_bridged_test)
+
+        # Make histograms with torch
+        unpaired_image_only = torch.histc(unpaired_image_only, bins=100, min=0.0, max=1.0).cpu().numpy()
+        paired_image_only = torch.histc(paired_image_only, bins=100, min=0.0, max=1.0).cpu().numpy()
+        unpaired_image_text = torch.histc(unpaired_image_text, bins=100, min=0.0, max=1.0).cpu().numpy()
+        paired_image_text = torch.histc(paired_image_text, bins=100, min=0.0, max=1.0).cpu().numpy()
+        unpaired_untrained_bridged_test = torch.histc(unpaired_untrained_bridged_test, bins=100, min=0.0, max=1.0).cpu().numpy()
+        paired_untrained_bridged_test = torch.histc(paired_untrained_bridged_test, bins=100, min=0.0, max=1.0).cpu().numpy()
+
+        # Plotly histograms in two subplots, left should show intra-modal, right CLIP and SeMoBridge (inter-modal)
+        fig = make_subplots(rows=1, cols=2, subplot_titles=("Intra-modal", "Inter-modal"))
+        # Intra-modal (bar plot)
+        bins = len(unpaired_image_only)
+        x = np.linspace(0.0, 1.0, bins)
+        bar_width = (1.0 / bins) * 0.9
+
+        fig.add_trace(
+            go.Bar(
+            x=x,
+            y=unpaired_image_only,
+            name="Image-Image Unpaired",
+            opacity=0.75,
+            marker_color="orange",
+            width=bar_width,
+            marker_line=dict(width=0),
+            ),
+            row=1,
+            col=1,
+        )
+        fig.add_trace(
+            go.Bar(
+            x=x,
+            y=paired_image_only,
+            name="Image-Image Paired",
+            opacity=0.75,
+            marker_color="yellow",
+            width=bar_width,
+            marker_line=dict(width=0),
+            ),
+            row=1,
+            col=1,
+        )
+
+        # # Inter-modal
+        # fig.add_trace(
+        #     go.Histogram(
+        #         x=unpaired_image_text,
+        #         name="Image-Text Unpaired",
+        #         opacity=0.75,
+        #         marker_color="green",
+        #         nbins=50,
+        #         histnorm="density",
+        #     ),
+        #     row=1,
+        #     col=2,
+        # )
+        # fig.add_trace(
+        #     go.Histogram(
+        #         x=paired_image_text,
+        #         name="Image-Text Paired",
+        #         opacity=0.75,
+        #         marker_color="olive",
+        #         nbins=50,
+        #         histnorm="density",
+        #     ),
+        #     row=1,
+        #     col=2,
+        # )
+        # fig.add_trace(
+        #     go.Histogram(
+        #         x=unpaired_untrained_bridged_test,
+        #         name="Image-Bridged Unpaired",
+        #         opacity=0.75,
+        #         marker_color="purple",
+        #         nbins=50,
+        #         histnorm="density",
+        #     ),
+        #     row=1,
+        #     col=2,
+        # )
+        # fig.add_trace(
+        #     go.Histogram(
+        #         x=paired_untrained_bridged_test,
+        #         name="Image-Bridged Paired",
+        #         opacity=0.75,
+        #         marker_color="red",
+        #         nbins=50,
+        #         histnorm="density",
+        #     ),
+        #     row=1,
+        #     col=2,
+        # )
+
+
+        fig.update_layout(
+            # remove legend for now
+            showlegend=False,
+            barmode="overlay",
+            # title=f"Cosine Similarity Distributions by Modalities, {self.cfg.DATASET.NAME} {self.cfg.DATASET.NUM_SHOTS} shots, {self.cfg.MODEL.BACKBONE.NAME}",
+            xaxis_title="Cosine Similarity",
+            yaxis_title="Sample Density",
+            bargap=0.0,
+            margin=dict(l=0, r=0, t=0, b=100),  # Remove margin
+            font=dict(
+                size=28,
+                family="Times New Roman",
+                color="black",
+                weight=500,
+            ),
+            # Make background white
+            plot_bgcolor="white",
+            paper_bgcolor="white",
+            # Add outline to the plot
+            xaxis=dict(
+                showline=True,
+                linecolor="black",
+                linewidth=2,
+                mirror=True,  # Mirror the outline on both sides
+            ),
+            yaxis=dict(
+                showline=True,
+                linecolor="black",
+                linewidth=2,
+                mirror=True,  # Mirror the outline on both sides
+            ),
+        )
+
+        # Add grey line to x=0
+        # fig.add_shape(
+        #     type="line",
+        #     x0=0,
+        #     y0=0,
+        #     x1=0,
+        #     y1=1,
+        #     line=dict(color="grey", width=2, dash="dash"),
+        #     xref="x",
+        #     yref="paper",
+        # )
+
+        # Move legend to top right INSIDE the plot, vertically
+        # fig.update_layout(
+        #     legend=dict(
+        #         orientation="v",
+        #         yanchor="top",
+        #         y=0.99,
+        #         xanchor="right",
+        #         x=0.99,
+        #         bgcolor="rgba(255,255,255,1.0)",
+        #     ),
+        # )
+
+        print("Saving cosine similarity distributions...")
+        fig_path = os.path.join(self.output_dir, "cosine_similarity_distributions.pdf")
+        # fig.write_image(fig_path, width=800, height=500)
+        # print(f"Saved cosine similarity distributions to {fig_path}")
+        fig_path = fig_path.replace(".pdf", ".png")
+        fig.write_image(fig_path, width=800, height=500)
+        print(f"Saved cosine similarity distributions to {fig_path}")
+
     def figure_intra_modal_vs_inter_modal_similarity(self):
         # classes_for_similarity_matrix = [""]
 
@@ -616,7 +909,7 @@ class SeMoBridge(SimpleTrainer):
         selected_num_classes = len(selected_classnames)
 
         # Select k test images per selected class
-        k = 16
+        k = 10000000
         selected_indices = []
         for class_id in classes_to_show.tolist():
             indices = torch.where(self.features.test_labels == class_id)[0]
@@ -707,13 +1000,7 @@ class SeMoBridge(SimpleTrainer):
             device=self.device,
             dtype=torch.float32,
         )
-        fFhat_predictions = torch.zeros(
-            selected_num_classes,
-            selected_num_classes,
-            device=self.device,
-            dtype=torch.float32,
-        )
-        fhatF_predictions = torch.zeros(
+        semobridge_predictions = torch.zeros(
             selected_num_classes,
             selected_num_classes,
             device=self.device,
@@ -729,36 +1016,20 @@ class SeMoBridge(SimpleTrainer):
             fFhat_logits_i = fFhat_logits[i]
             fhatF_logits_i = fhatF_logits[i]
 
-            # Get the cosine similarity
-            clip_predictions[true_label] += clip_logits_i
-            intra_modal_predictions[true_label] += intra_modal_logits
-            fFhat_predictions[true_label] += fFhat_logits_i
-            fhatF_predictions[true_label] += fhatF_logits_i
-
-        # Normalize the predictions by the number of samples in each class
-        clip_predictions /= selected_test_embeds_normed.shape[0]
-        intra_modal_predictions /= selected_test_embeds_normed.shape[0]
-        fFhat_predictions /= selected_test_embeds_normed.shape[0]
-        fhatF_predictions /= selected_test_embeds_normed.shape[0]
-
-        # Normalize the logits to be min 0 and max 1
-        clip_predictions = (clip_predictions - clip_predictions.min()) / (
-            clip_predictions.max() - clip_predictions.min()
-        )
-        intra_modal_predictions = (
-            intra_modal_predictions - intra_modal_predictions.min()
-        ) / (intra_modal_predictions.max() - intra_modal_predictions.min())
-        fFhat_predictions = (fFhat_predictions - fFhat_predictions.min()) / (
-            fFhat_predictions.max() - fFhat_predictions.min()
-        )
-        fhatF_predictions = (fhatF_predictions - fhatF_predictions.min()) / (
-            fhatF_predictions.max() - fhatF_predictions.min()
-        )
+            # Increase the predictions of the highest logit class
+            pred_clip = clip_logits_i.argmax()
+            clip_predictions[true_label, pred_clip] += 1
+            pred_intra = intra_modal_logits.argmax()
+            intra_modal_predictions[true_label, pred_intra] += 1
+            
+            pred_semobridge = fFhat_logits_i * 0.5 + fhatF_logits_i * 0.5
+            pred_semobridge = pred_semobridge.argmax()
+            semobridge_predictions[true_label, pred_semobridge] += 1
 
         # Create a subplot with two heatmaps: intra-modal (left) and semobridge predictions (right)
         fig = make_subplots(
-            rows=1,
-            cols=3,
+            rows=2,
+            cols=1,
             # subplot_titles=(
             #     # r"$\Large\text{CLIP}~~\mathbf f^\mathrm{proj}\mathbf T^\mathrm{proj}$",
             #     r"$\Large\text{Intra-modal}~~\mathbf f^\mathrm{proj}\mathbf F^\mathrm{proj}$",
@@ -767,9 +1038,9 @@ class SeMoBridge(SimpleTrainer):
             # ),
             subplot_titles=(
                 # r"$\Large\text{CLIP}~~\mathbf f^\mathrm{proj}\mathbf T^\mathrm{proj}$",
-                r"$\Huge\text{Intra-modal}~~\mathbf f^\mathrm{proj}\mathbf F^{\mathrm{proj}\top}$",
-                r"$\Huge\text{Ours}~~{\mathbf f}^\mathrm{proj}\mathbf F^{\mathrm{proj}\top}$",
-                r"$\Huge\text{Ours}~~\mathbf f^\mathrm{proj}{\mathbf F}^{\mathrm{proj}\top}$",
+                #r"$\Huge\text{Intra-modal}~~\mathbf f^\mathrm{proj}\mathbf F^{\mathrm{proj}\top}$",
+                #r"$\Huge\text{Ours}~~{\mathbf f}^\mathrm{proj}\mathbf F^{\mathrm{proj}\top}$",
+                #r"$\Huge\text{Ours}~~\mathbf f^\mathrm{proj}{\mathbf F}^{\mathrm{proj}\top}$",
             ),
             vertical_spacing=0.1,
             horizontal_spacing=0.06,
@@ -810,27 +1081,27 @@ class SeMoBridge(SimpleTrainer):
             col=1,
         )
 
-        # Semobridge similarity heatmap (left)
-        fig.add_trace(
-            go.Heatmap(
-                z=fhatF_predictions.cpu(),
-                x=axis_labels,
-                y=axis_labels,
-                zmin=0,
-                # zmax=100,
-                colorscale="Purples",
-                hoverongaps=False,
-                yaxis="y2",
-                showscale=False,
-            ),
-            row=1,
-            col=2,
-        )
+        # # Semobridge similarity heatmap (left)
+        # fig.add_trace(
+        #     go.Heatmap(
+        #         z=fhatF_predictions.cpu(),
+        #         x=axis_labels,
+        #         y=axis_labels,
+        #         zmin=0,
+        #         # zmax=100,
+        #         colorscale="Purples",
+        #         hoverongaps=False,
+        #         yaxis="y2",
+        #         showscale=False,
+        #     ),
+        #     row=1,
+        #     col=2,
+        # )
 
         # Semobridge similarity heatmap (right)
         fig.add_trace(
             go.Heatmap(
-                z=fFhat_predictions.cpu(),
+                z=semobridge_predictions.cpu(),
                 x=axis_labels,
                 y=axis_labels,
                 zmin=0,
@@ -841,29 +1112,29 @@ class SeMoBridge(SimpleTrainer):
                 # Color scale for the right heatmap with ticks at 0, 10, ..., 100
                 showscale=True,
                 colorbar=dict(
-                    title=dict(
-                        text="",
-                        font=dict(size=24, family="Times New Roman"),
+                    # set tick font
+                    tickfont=dict(
+                        size=28, family="Times New Roman", color="black", weight=500
                     ),
                     # tickvals=list(range(0, 110, 10)),
                     # ticktext=[str(i) for i in range(0, 110, 10)],
                 ),
             ),
-            row=1,
-            col=3,
+            row=2,
+            col=1,
         )
 
         # Show axes with ticks
         for row in range(1, 3):
             for col in range(1, 3):
                 fig.update_xaxes(
-                    showticklabels=True,
+                    showticklabels=False,
                     tickangle=0,
                     row=row,
                     col=col,
                 )
                 fig.update_yaxes(
-                    showticklabels=True,
+                    showticklabels=False,
                     tickangle=0,
                     row=row,
                     col=col,
@@ -911,34 +1182,34 @@ class SeMoBridge(SimpleTrainer):
         #     layer="below traces",
         # )
 
-        fig.update_layout(
-            # title=f"{self.cfg.DATASET.NAME}",
-            xaxis_title="",
-            yaxis_title="Query Image Class",
-            font=dict(size=44, family="Times New Roman", color="black", weight=500),
-            # Remove margin and padding
-            margin=dict(l=5, r=2, t=80, b=150),
-        )
+        # fig.update_layout(
+        #     # title=f"{self.cfg.DATASET.NAME}",
+        #     xaxis_title="",
+        #     yaxis_title="Query Image Class",
+        #     font=dict(size=44, family="Times New Roman", color="black", weight=500),
+        #     # Remove margin and padding
+        #     margin=dict(l=5, r=2, t=80, b=150),
+        # )
 
         # Increase space between plot and axis title
-        for col in range(1, 4):
-            fig.update_xaxes(title_standoff=20, row=1, col=col)
-            fig.update_yaxes(title_standoff=20, row=1, col=col)
+        for row in range(1, 3):
+            fig.update_xaxes(title_standoff=20, row=row, col=1)
+            fig.update_yaxes(title_standoff=20, row=row, col=1)
 
         # Increase space between axis numbers and heatmaps
-        for col in range(1, 4):
-            fig.update_xaxes(ticklabelposition="outside", row=1, col=col)
-            fig.update_yaxes(ticklabelposition="outside", row=1, col=col)
+        for row in range(1, 3):
+            fig.update_xaxes(ticklabelposition="outside", row=row, col=1)
+            fig.update_yaxes(ticklabelposition="outside", row=row, col=1)
 
         # Add borders to the heatmaps
-        for col in range(1, 4):
+        for row in range(1, 3):
             fig.update_xaxes(
                 showline=True,
                 linecolor="black",
                 linewidth=2,
                 layer="below traces",
-                row=1,
-                col=col,
+                row=row,
+                col=1,
                 mirror=True,  # Mirror the x-axis line
             )
             fig.update_yaxes(
@@ -946,41 +1217,41 @@ class SeMoBridge(SimpleTrainer):
                 linecolor="black",
                 linewidth=2,
                 layer="below traces",
-                row=1,
-                col=col,
+                row=row,
+                col=1,
                 mirror=True,  # Mirror the y-axis line
             )
 
-        # Increase space between subplot titles and heatmaps
-        fig.layout.annotations[0].update(yshift=13)
-        fig.layout.annotations[1].update(yshift=13)
-        fig.layout.annotations[2].update(yshift=13)
+        # # Increase space between subplot titles and heatmaps
+        # fig.layout.annotations[0].update(yshift=13)
+        # fig.layout.annotations[1].update(yshift=13)
+        # #fig.layout.annotations[2].update(yshift=13)
 
-        # Add text annotation below the two heatmaps as X-axis title
-        fig.add_annotation(
-            text="Few-shot Image Class",
-            xref="paper",
-            yref="paper",
-            xanchor="center",
-            yanchor="bottom",
-            x=0.5,
-            y=-0.31,
-            showarrow=False,
-            font=dict(size=48, family="Times New Roman", color="black", weight=500),
-        )
+        # # Add text annotation below the two heatmaps as X-axis title
+        # fig.add_annotation(
+        #     text="Few-shot Image Class",
+        #     xref="paper",
+        #     yref="paper",
+        #     xanchor="center",
+        #     yanchor="bottom",
+        #     x=0.5,
+        #     y=-0.31,
+        #     showarrow=False,
+        #     font=dict(size=48, family="Times New Roman", color="black", weight=500),
+        # )
 
         # Add text annotation to below the colorbar
-        fig.add_annotation(
-            text="Sim.",
-            xref="paper",
-            yref="paper",
-            xanchor="right",
-            yanchor="bottom",
-            x=1.075,
-            y=-0.2,
-            showarrow=False,
-            font=dict(size=34, family="Times New Roman", color="black", weight=500),
-        )
+        # fig.add_annotation(
+        #     text="Sim.",
+        #     xref="paper",
+        #     yref="paper",
+        #     xanchor="right",
+        #     yanchor="bottom",
+        #     x=1.075,
+        #     y=-0.2,
+        #     showarrow=False,
+        #     font=dict(size=50, family="Times New Roman", color="black", weight=500),
+        # )
 
         # Remove plot background color
         fig.update_layout(plot_bgcolor="white")
@@ -999,377 +1270,11 @@ class SeMoBridge(SimpleTrainer):
         # fig.write_html(fig_path)
         # fig.write_image("trash.pdf")  # Because of plotly bug
         # time.sleep(1)
-        fig.write_image(fig_path, width=1700, height=650)
+        fig.write_image(fig_path, width=520, height=1000)
         print(f"Saved intra-modal vs inter-modal similarity heatmap to {fig_path}")
-
-    def figure_cosine_similarity_histogram(self):
-        save_path = os.path.join(
-            "preprocessed",
-            f"{self.cfg.MODEL.BACKBONE.NAME.replace("/", "")}_{self.cfg.TRAINER.SEMOBRIDGE.PREC}",
-            self.cfg.DATASET.DIRECTORY,
-            f"aphotoofa.pt",
-        )
-        if not os.path.exists(save_path):
-            print(f"File {save_path} does not exist, embedding...")
-            # We need to load CLIP for this
-            self.features.load_clip_if_not_loaded()
-            texts = self.features.load_class_text_prompts("aphotoofa")
-            text_projected, text_projected_normed, text_encoded, text_encoded_normed = (
-                self.features.embed_class_text_prompts(texts)
-            )
-            torch.save(
-                [
-                    text_projected,
-                    text_projected_normed,
-                    text_encoded,
-                    text_encoded_normed,
-                ],
-                save_path,
-            )
-        else:
-            print(f"Loading {save_path}")
-            text_projected, text_projected_normed, text_encoded, text_encoded_normed = (
-                torch.load(save_path)
-            )
-        text_projected_clip_normed = F.normalize(text_projected, dim=-1)
-
-        # Pick a subset of test embeds and labels
-        test_subset_indices = []
-        # k_per_class = self.features.num_shots
-        # k_per_class = 1
-
-        # for class_id in self.features.test_labels.unique():
-        #     class_indices = torch.where(self.features.test_labels == class_id)[0]
-        #     if class_indices.numel() > k_per_class:
-        #         class_indices = class_indices[:k_per_class]
-        #     test_subset_indices.append(class_indices)
-        # test_subset_indices = torch.cat(test_subset_indices)
-
-        # ALL
-        test_subset_indices = torch.arange(
-            self.features.test_embeds.shape[0], device=self.device
-        )
-
-        test_embeds_subset = self.features.test_embeds[test_subset_indices]
-        test_embeds_normed_subset = self.features.test_embeds_normed[
-            test_subset_indices
-        ]
-        test_labels_subset = self.features.test_labels[test_subset_indices]
-
-        image_image_sims = (
-            test_embeds_normed_subset @ self.features.few_shot_embeds_mean_normed.T
-        )
-
-        # text_only = self.text_sims.flatten().cpu().numpy()
-        # image_only = self.image_sims.flatten().cpu().numpy()
-
-        image_text_sims = test_embeds_normed_subset @ text_projected_clip_normed.T
-
-        unpaired_image_only = image_image_sims[
-            test_labels_subset.unsqueeze(1) != self.targets_single.unsqueeze(0)
-        ]  # [N', K * (C - 1)]
-        unpaired_image_only = unpaired_image_only.flatten()
-        paired_image_only = image_image_sims[
-            test_labels_subset.unsqueeze(1) == self.targets_single.unsqueeze(0)
-        ]  # [N', 1]
-        paired_image_only = paired_image_only.flatten()
-
-        unpaired_image_text = image_text_sims[
-            test_labels_subset.unsqueeze(1) != self.targets_single.unsqueeze(0)
-        ]  # [N', K * (C - 1)]
-        unpaired_image_text = unpaired_image_text.flatten()
-        paired_image_text = image_text_sims[
-            test_labels_subset.unsqueeze(1) == self.targets_single.unsqueeze(0)
-        ]  # [N', 1]
-        paired_image_text = paired_image_text.flatten()
-
-        # Create untrained bridged few-shot embeds
-        bridged_few_shot_embeds_untrained = self.semobridge(
-            self.features.few_shot_embeds, use_class_bias=True, use_untrained=True
-        )[0]
-        bridged_few_shot_embeds_untrained = bridged_few_shot_embeds_untrained.mean(
-            dim=1
-        )  # [C, D]
-        bridged_few_shot_embeds_untrained_normed = F.normalize(
-            bridged_few_shot_embeds_untrained, dim=-1
-        )
-
-        bridged_test_untrained_sims = test_embeds_normed_subset @ (
-            bridged_few_shot_embeds_untrained_normed.T
-        )
-        unpaired_untrained_bridged_test = bridged_test_untrained_sims[
-            test_labels_subset.unsqueeze(1) != self.targets_single.unsqueeze(0)
-        ]
-        unpaired_untrained_bridged_test = unpaired_untrained_bridged_test.flatten()
-        paired_untrained_bridged_test = bridged_test_untrained_sims[
-            test_labels_subset.unsqueeze(1) == self.targets_single.unsqueeze(0)
-        ]
-        paired_untrained_bridged_test = paired_untrained_bridged_test.flatten()
-
-        # Create trained bridged test embeds
-        bridged_few_shot_embeds = self.semobridge(
-            self.features.few_shot_embeds, use_class_bias=True, use_untrained=False
-        )[0]
-        bridged_few_shot_embeds = bridged_few_shot_embeds.mean(dim=1)  # [C, D]
-        bridged_few_shot_embeds_normed = F.normalize(bridged_few_shot_embeds, dim=-1)
-        bridged_test_sims = test_embeds_normed_subset @ (
-            bridged_few_shot_embeds_normed.T
-        )
-
-        unpaired_bridged_test = bridged_test_sims[
-            test_labels_subset.unsqueeze(1) != self.targets_single.unsqueeze(0)
-        ]  # [N', K * (C - 1)]
-        unpaired_bridged_test = unpaired_bridged_test.flatten()
-        paired_bridged_test = bridged_test_sims[
-            test_labels_subset.unsqueeze(1) == self.targets_single.unsqueeze(0)
-        ]  # [N', 1]
-        paired_bridged_test = paired_bridged_test.flatten()
-
-        # Reduce the cosine similarity distribution resolution for smaller PDF size
-        # We want to sample the distribution with 100 points
-        min_sim = -0.1
-        max_sim = 1.11
-
-        # Calculate num_bins so that we have an integer number of bins
-        num_bins = 250
-
-        # unpaired_image_only = (
-        #     torch.histc(unpaired_image_only, bins=num_bins, min=min_sim, max=max_sim)
-        #     .cpu()
-        #     .numpy()
-        # )
-        # paired_image_only = (
-        #     torch.histc(paired_image_only, bins=num_bins, min=min_sim, max=max_sim)
-        #     .cpu()
-        #     .numpy()
-        # )
-        # unpaired_image_text = (
-        #     torch.histc(unpaired_image_text, bins=num_bins, min=min_sim, max=max_sim)
-        #     .cpu()
-        #     .numpy()
-        # )
-        # paired_image_text = (
-        #     torch.histc(paired_image_text, bins=num_bins, min=min_sim, max=max_sim)
-        #     .cpu()
-        #     .numpy()
-        # )
-        # unpaired_image_converted_untrained = (
-        #     torch.histc(
-        #         unpaired_image_converted_untrained,
-        #         bins=num_bins,
-        #         min=min_sim,
-        #         max=max_sim,
-        #     )
-        #     .cpu()
-        #     .numpy()
-        # )
-        # paired_image_converted_untrained = (
-        #     torch.histc(
-        #         paired_image_converted_untrained,
-        #         bins=num_bins,
-        #         min=min_sim,
-        #         max=max_sim,
-        #     )
-        #     .cpu()
-        #     .numpy()
-        # )
-        # unpaired_image_converted = (
-        #     torch.histc(
-        #         unpaired_image_converted, bins=num_bins, min=min_sim, max=max_sim
-        #     )
-        #     .cpu()
-        #     .numpy()
-        # )
-        # paired_image_converted = (
-        #     torch.histc(paired_image_converted, bins=num_bins, min=min_sim, max=max_sim)
-        #     .cpu()
-        #     .numpy()
-        # )
-
-        # Plot with Plotly
-        fig = go.Figure()
-
-        # marker.pattern.shape = ['', '/', '\\', 'x', '-', '|', '+', '.']
-        # fig.add_trace(
-        #     go.Histogram(
-        #         x=text_only,
-        #         name="Text-Text",
-        #         histnorm="probability density",
-        #         marker=dict(color="blue", pattern=dict(shape="/")),
-        #         opacity=0.6,
-        #     )
-        # )
-
-        min_sim = min_sim
-
-        unpaired_image_only = unpaired_image_only.cpu()
-        paired_image_only = paired_image_only.cpu()
-        unpaired_image_text = unpaired_image_text.cpu()
-        paired_image_text = paired_image_text.cpu()
-        unpaired_untrained_bridged_test = unpaired_untrained_bridged_test.cpu()
-        paired_untrained_bridged_test = paired_untrained_bridged_test.cpu()
-        unpaired_bridged_test = unpaired_bridged_test.cpu().numpy()
-        paired_bridged_test = paired_bridged_test.cpu().numpy()
-
-        xbins = dict(
-            start=min_sim,
-            end=max_sim,
-            size=(max_sim - min_sim) / num_bins,
-        )
-
-        print("Plotting cosine similarity distributions...")
-
-        fig.add_trace(
-            go.Histogram(
-                x=unpaired_image_only,
-                name=r"$\text{Intra-modal}~~ \mathbf F\mathbf F~~\text{Unpaired}$",
-                histnorm="probability density",
-                marker=dict(color="orange"),
-                # marker=dict(color="orange", pattern=dict(shape="\\")),
-                opacity=0.6,
-                xbins=xbins,
-            )
-        )
-        fig.add_trace(
-            go.Histogram(
-                x=paired_image_only,
-                name=r"$\text{Intra-modal}~~ \mathbf F\mathbf F~~\text{Paired}$",
-                histnorm="probability density",
-                marker=dict(color="yellow"),
-                # marker=dict(color="yellow", pattern=dict(shape="\\")),
-                opacity=0.6,
-                xbins=xbins,
-            )
-        )
-        fig.add_trace(
-            go.Histogram(
-                x=unpaired_image_text,
-                name=r"$\text{CLIP}~~ \mathbf F\mathbf T_\mathrm{proj}~~\text{Unpaired}$",
-                histnorm="probability density",
-                marker=dict(color="green"),
-                # marker=dict(color="green", pattern=dict(shape="-")),
-                opacity=0.6,
-                xbins=xbins,
-            )
-        )
-        fig.add_trace(
-            go.Histogram(
-                x=paired_image_text,
-                name=r"$\text{CLIP}~~ \mathbf F\mathbf T_\mathrm{proj}~~\text{Paired}$",
-                histnorm="probability density",
-                marker=dict(color="olive"),
-                # marker=dict(color="olive", pattern=dict(shape="-")),
-                opacity=0.6,
-                xbins=xbins,
-            )
-        )
-        fig.add_trace(
-            go.Histogram(
-                x=unpaired_untrained_bridged_test,
-                name=r"$\text{SeMoBridge}~~ \mathbf F\hat{\mathbf F}_\mathrm{proj}~~\text{Unpaired}$",
-                histnorm="probability density",
-                marker=dict(color="purple"),
-                # marker=dict(color="purple", pattern=dict(shape=".")),
-                opacity=0.6,
-                xbins=xbins,
-            )
-        )
-        fig.add_trace(
-            go.Histogram(
-                x=paired_untrained_bridged_test,
-                name=r"$\text{SeMoBridge}~~ \mathbf F\hat{\mathbf F}_\mathrm{proj}~~\text{Paired}$",
-                histnorm="probability density",
-                marker=dict(color="red"),
-                # marker=dict(color="red", pattern=dict(shape=".")),
-                opacity=0.6,
-                xbins=xbins,
-            )
-        )
-        fig.add_trace(
-            go.Histogram(
-                x=unpaired_bridged_test,
-                name=r"$\text{SeMoBridge-T}~~ \mathbf F\hat{\mathbf F}_\mathrm{proj}~~\text{Unpaired}$",
-                histnorm="probability density",
-                marker=dict(color="DodgerBlue"),
-                # marker=dict(color="lightblue", pattern=dict(shape=".")),
-                opacity=0.6,
-                xbins=xbins,
-            )
-        )
-        fig.add_trace(
-            go.Histogram(
-                x=paired_bridged_test,
-                name=r"$\text{SeMoBridge-T}~~ \mathbf F\hat{\mathbf F}_\mathrm{proj}~~\text{Paired}$",
-                histnorm="probability density",
-                marker=dict(color="blue"),
-                # marker=dict(color="blue", pattern=dict(shape=".")),
-                opacity=0.6,
-                xbins=xbins,
-            )
-        )
-
-        fig.update_layout(
-            barmode="overlay",
-            # title=f"Cosine Similarity Distributions by Modalities, {self.cfg.DATASET.NAME} {self.cfg.DATASET.NUM_SHOTS} shots, {self.cfg.MODEL.BACKBONE.NAME}",
-            xaxis_title="Cosine Similarity",
-            yaxis_title="Sample Density",
-            bargap=0.0,
-            margin=dict(l=0, r=0, t=0, b=100),  # Remove margin
-            font=dict(
-                size=28,
-                family="Times New Roman",
-                color="black",
-                weight=500,
-            ),
-            # Make background white
-            plot_bgcolor="white",
-            paper_bgcolor="white",
-            # Add outline to the plot
-            xaxis=dict(
-                showline=True,
-                linecolor="black",
-                linewidth=2,
-                mirror=True,  # Mirror the outline on both sides
-            ),
-            yaxis=dict(
-                showline=True,
-                linecolor="black",
-                linewidth=2,
-                mirror=True,  # Mirror the outline on both sides
-            ),
-        )
-
-        # Add grey line to x=0
-        fig.add_shape(
-            type="line",
-            x0=0,
-            y0=0,
-            x1=0,
-            y1=1,
-            line=dict(color="grey", width=2, dash="dash"),
-            xref="x",
-            yref="paper",
-        )
-
-        # Move legend to top right INSIDE the plot, vertically
-        fig.update_layout(
-            legend=dict(
-                orientation="v",
-                yanchor="top",
-                y=0.99,
-                xanchor="right",
-                x=0.99,
-                bgcolor="rgba(255,255,255,1.0)",
-            ),
-        )
-
-        print("Saving cosine similarity distributions...")
-        fig_path = os.path.join(self.output_dir, "cosine_similarity_distributions.pdf")
-        fig.write_image(fig_path, width=800, height=500)
-        print(f"Saved cosine similarity distributions to {fig_path}")
-        fig_path = fig_path.replace(".pdf", ".png")
-        fig.write_image(fig_path, width=800, height=500)
-        print(f"Saved cosine similarity distributions to {fig_path}")
+        # also save as svg
+        fig_path = fig_path.replace(".pdf", ".svg")
+        fig.write_image(fig_path, width=520, height=1000)
 
     def check_bridged_few_shot_token_words(self):
         # Bridge the few-shots
@@ -1402,7 +1307,7 @@ class SeMoBridge(SimpleTrainer):
         # Generate visualizations
 
         #self.check_bridged_few_shot_token_words()
-        self.figure_intra_modal_vs_inter_modal_similarity()
+        #self.figure_intra_modal_vs_inter_modal_similarity()
         self.figure_cosine_similarity_histogram()
 
         # fig_path = os.path.join(self.output_dir, "cosine_similarity_distributions.png")
