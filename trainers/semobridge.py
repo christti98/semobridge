@@ -1612,7 +1612,7 @@ class SeMoBridge(SimpleTrainer):
 
         param_names = []
 
-        # Check if any of z2, z3, z4 are in self.cfg.LOGITS
+        # Check if any of z2, z3 are in self.cfg.LOGITS
         if (
             "z2" in self.cfg.LOGITS
             or "z3" in self.cfg.LOGITS
@@ -1642,7 +1642,6 @@ class SeMoBridge(SimpleTrainer):
         #     "lambda1",
         #     "lambda2",
         #     "lambda3",
-        #     "lambda4",
         # ]
 
         for param_name in param_names:
