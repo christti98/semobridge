@@ -4,13 +4,15 @@ import plotly.graph_objs as go
 x = [1, 2, 4, 8, 16]
 
 # Accuracy values for each prompt type (placeholder/example)
-aphotoofa_template = [71.96, 75.19, 77.62, 80.01, 82.42]
-clip_prompts = [72.32, 75.30, 77.81, 80.07, 82.39]
-clip_ensemble = [72.51, 75.45, 77.88, 80.09, 82.47]
-cupl = [74.01, 76.28, 78.45, 80.53, 82.63]
-clip_and_cupl = [74.02, 76.33, 78.55, 80.50, 82.66]
+aphotoofa_template = [71.73, 74.96, 77.42, 79.56, 81.90] # NEW
+clip_prompts = [72.10, 75.11, 77.42, 79.71, 81.83] # NEW
+clip_ensemble = [72.31, 75.23, 77.63, 79.73, 82.01] # NEW
+cupl = [73.88, 76.08, 78.20, 80.07, 82.19] # NEW
+clip_and_cupl = [74.01, 76.20, 78.21, 80.10, 82.20] # NEW
 
 colors = ["#B49250", "#F9A800", "#F97400", "#D35FDB", "#87218F"]
+
+symbols = ["circle", "square", "diamond", "cross", "star"]
 
 
 # Make color into rgba with alpha
@@ -32,7 +34,7 @@ traces = [
         mode="lines+markers",
         name=r'"a photo of a {}"',
         line=dict(color=colors[0], width=line_width, dash="dash"),
-        marker=dict(size=marker_size),
+        marker=dict(size=marker_size, symbol=symbols[0]),
     ),
     go.Scatter(
         x=x,
@@ -40,7 +42,7 @@ traces = [
         mode="lines+markers",
         name="CLIP prompts",
         line=dict(color=colors[1], width=line_width),
-        marker=dict(size=marker_size),
+        marker=dict(size=marker_size, symbol=symbols[1]),
     ),
     go.Scatter(
         x=x,
@@ -48,23 +50,23 @@ traces = [
         mode="lines+markers",
         name="CLIP ensemble",
         line=dict(color=colors[2], width=line_width),
-        marker=dict(size=marker_size),
+        marker=dict(size=marker_size, symbol=symbols[2]),
     ),
     go.Scatter(
         x=x,
         y=cupl,
         mode="lines+markers",
-        name="CuPL prompts",
+        name="CuPL",
         line=dict(color=colors[3], width=line_width),
-        marker=dict(size=marker_size),
+        marker=dict(size=marker_size, symbol=symbols[3]),
     ),
     go.Scatter(
         x=x,
         y=clip_and_cupl,
         mode="lines+markers",
-        name="CLIP ensemble + CuPL prompts",
+        name="CLIP ensemble+CuPL",
         line=dict(color=colors[4], width=line_width),
-        marker=dict(size=marker_size),
+        marker=dict(size=marker_size, symbol=symbols[4]),
     ),
 ]
 
@@ -98,7 +100,7 @@ layout = go.Layout(
         y=0.01,
         xanchor="right",
         yanchor="bottom",
-        font=dict(size=22, family="Times New Roman"),
+        font=dict(size=26, family="Times New Roman"),
         borderwidth=0,
     ),
     plot_bgcolor="white",
@@ -108,8 +110,15 @@ layout = go.Layout(
 
 # Create and save figure
 fig = go.Figure(data=traces, layout=layout)
+fig_path = "shots_vs_prompt_type_accuracy.pdf"
 fig.write_image(
-    "shots_vs_prompt_type_accuracy.pdf",
+    fig_path.replace(".pdf", ".pdf"),
+    width=800,
+    height=500,
+)
+
+fig.write_image(
+    fig_path.replace(".pdf", ".svg"),
     width=800,
     height=500,
 )

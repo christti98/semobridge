@@ -239,11 +239,9 @@ class SeMoBridge(SimpleTrainer):
                 "alpha": 1.0,
                 "beta": 1.0,
                 "gamma": 1.0,
-                "delta": 1.0,
                 "lambda1": 0.5,
                 "lambda2": 0.75,
                 "lambda3": 0.1,
-                "lambda4": 0.1,
             }
             if "z1" not in self.cfg.LOGITS:
                 self.val_params.pop("lambda1")
@@ -251,8 +249,6 @@ class SeMoBridge(SimpleTrainer):
                 self.val_params.pop("lambda2")
             if "z3" not in self.cfg.LOGITS:
                 self.val_params.pop("lambda3")
-            if "z4" not in self.cfg.LOGITS:
-                self.val_params.pop("lambda4")
 
             # Use the init parameters from the cfg
             for param_name in self.val_params.keys():
@@ -478,16 +474,12 @@ class SeMoBridge(SimpleTrainer):
                 val_embeds_converted_projected_normed
                 @ self.features.few_shot_embeds_mean_normed.T
             )
-            semobridge_conv_prompt_logits = (
-                val_embeds_converted_projected_normed @ self.final_prompts_normed.T
-            )
 
             val_logits = self.blend_logits(
                 self.features.few_shot_divergence,
                 self.features.val_clip_logits,
                 semobridge_logits,
                 semobridge_conv_images_logits,
-                semobridge_conv_prompt_logits,
                 self.val_params,
             )
 
@@ -628,7 +620,7 @@ class SeMoBridge(SimpleTrainer):
             self.features.few_shot_embeds_flat_normed @ self.features.few_shot_embeds_flat_normed.T
         )
         image_text_sims = self.features.few_shot_embeds_mean_normed @ text_projected_clip_normed.T
-        
+
         # Delete unused variables to save memory
         del text_encoded
         del text_encoded_normed
@@ -659,21 +651,19 @@ class SeMoBridge(SimpleTrainer):
 
         #image_text_sims = self.features.few_shot_embeds_mean_normed @ text_projected_clip_normed.T
 
-        
-
+        # is_same_class should be [num_classes * num_shots, num_classes * num_shots]
         unpaired_image_only = image_image_sims[
             self.targets.unsqueeze(1) != self.targets.unsqueeze(0)
         ]
         unpaired_image_only = unpaired_image_only.flatten()
-        # also not the diagonal
         paired_image_only = image_image_sims[
+            # remove self-comparisons 
             self.targets.unsqueeze(1) == self.targets.unsqueeze(0)
         ]
+        # remove self-comparisons
         paired_image_only = paired_image_only.flatten()
-
-        del image_image_sims
-
     
+        # get image-text similarities that are unpaired and paired to their respective class prompt
         unpaired_image_text = image_text_sims[
             self.targets_single.unsqueeze(1) != self.targets_single.unsqueeze(0)
         ]
@@ -684,8 +674,6 @@ class SeMoBridge(SimpleTrainer):
         paired_image_text = paired_image_text.flatten()
 
         del image_text_sims
-
-        
 
         bridged_test_untrained_sims = self.features.few_shot_embeds_mean_normed @ (
             bridged_few_shot_embeds_untrained_normed.T
@@ -701,123 +689,216 @@ class SeMoBridge(SimpleTrainer):
 
         del bridged_test_untrained_sims
 
-        # Normalize so that lowest sim is 0, highest is 1
-        def normalize_similarities(sims):
-            sims = sims
-            min_sim = sims.min()
-            max_sim = sims.max()
-            normalized_sims = (sims - min_sim) / (max_sim - min_sim)
-            return normalized_sims
-        
-        # unpaired_image_only = normalize_similarities(unpaired_image_only)
-        # paired_image_only = normalize_similarities(paired_image_only)
-        # unpaired_image_text = normalize_similarities(unpaired_image_text)
-        # paired_image_text = normalize_similarities(paired_image_text)
-        # unpaired_untrained_bridged_test = normalize_similarities(unpaired_untrained_bridged_test)
-        # paired_untrained_bridged_test = normalize_similarities(paired_untrained_bridged_test)
+        final_prompts_normed = F.normalize(
+            self.semobridge.converted_projected_mean, dim=-1
+        )
+        bridged_trained_sims = self.features.few_shot_embeds_mean_normed @ final_prompts_normed.T
+        unpaired_trained_bridged_test = bridged_trained_sims[
+            self.targets_single.unsqueeze(1) != self.targets_single.unsqueeze(0)
+        ]
+        unpaired_trained_bridged_test = unpaired_trained_bridged_test.flatten()
+        paired_trained_bridged_test = bridged_trained_sims[
+            self.targets_single.unsqueeze(1) == self.targets_single.unsqueeze(0)
+        ]
+        paired_trained_bridged_test = paired_trained_bridged_test.flatten()
+        del bridged_trained_sims
+
+        num_bins = 50
 
         # Make histograms with torch
-        unpaired_image_only = torch.histc(unpaired_image_only, bins=100, min=0.0, max=1.0).cpu().numpy()
-        paired_image_only = torch.histc(paired_image_only, bins=100, min=0.0, max=1.0).cpu().numpy()
-        unpaired_image_text = torch.histc(unpaired_image_text, bins=100, min=0.0, max=1.0).cpu().numpy()
-        paired_image_text = torch.histc(paired_image_text, bins=100, min=0.0, max=1.0).cpu().numpy()
-        unpaired_untrained_bridged_test = torch.histc(unpaired_untrained_bridged_test, bins=100, min=0.0, max=1.0).cpu().numpy()
-        paired_untrained_bridged_test = torch.histc(paired_untrained_bridged_test, bins=100, min=0.0, max=1.0).cpu().numpy()
+        min_sim = torch.min(unpaired_image_only.min(), paired_image_only.min()).item()
+        max_sim = torch.max(unpaired_image_only.max(), paired_image_only.max()).item()
+        # Make lowest be 0.0, highest be 1.0
+        unpaired_image_only = (unpaired_image_only - min_sim) / (max_sim - min_sim)
+        paired_image_only = (paired_image_only - min_sim) / (max_sim - min_sim)
+
+        unpaired_image_only = torch.histc(unpaired_image_only, bins=num_bins, min=0.0, max=1.0)
+        paired_image_only = torch.histc(paired_image_only, bins=num_bins, min=0.0, max=1.0)
+
+        min_sim = torch.min(torch.stack([unpaired_image_text.min(), paired_image_text.min(), unpaired_untrained_bridged_test.min(), paired_untrained_bridged_test.max()])).item()
+        max_sim = torch.max(torch.stack([unpaired_image_text.max(), paired_image_text.max(), unpaired_untrained_bridged_test.max(), paired_untrained_bridged_test.max()])).item()
+        unpaired_image_text = (unpaired_image_text - min_sim) / (max_sim - min_sim)
+        paired_image_text = (paired_image_text - min_sim) / (max_sim - min_sim)
+        unpaired_untrained_bridged_test = (unpaired_untrained_bridged_test - min_sim) / (
+            max_sim - min_sim
+        )
+        paired_untrained_bridged_test = (paired_untrained_bridged_test - min_sim) / (
+            max_sim - min_sim
+        )
+        unpaired_image_text = torch.histc(unpaired_image_text, bins=num_bins, min=0.0, max=1.0)
+        paired_image_text = torch.histc(paired_image_text, bins=num_bins, min=0.0, max=1.0)
+        unpaired_untrained_bridged_test = torch.histc(unpaired_untrained_bridged_test, bins=num_bins, min=0.0, max=1.0)
+        paired_untrained_bridged_test = torch.histc(paired_untrained_bridged_test, bins=num_bins, min=0.0, max=1.0)
+
+        # TRAINED SEMOBRIDGE
+        unpaired_trained_bridged_test = (unpaired_trained_bridged_test - min_sim) / (
+            max_sim - min_sim
+        )
+        paired_trained_bridged_test = (paired_trained_bridged_test - min_sim) / (
+            max_sim - min_sim
+        )
+        unpaired_trained_bridged_test = torch.histc(unpaired_trained_bridged_test, bins=num_bins, min=0.0, max=1.0)
+        paired_trained_bridged_test = torch.histc(paired_trained_bridged_test, bins=num_bins, min=0.0, max=1.0)
+        # END TRAINED SEMOBRIDGE
+
+        # Normalize histograms to density
+        unpaired_image_only = unpaired_image_only / unpaired_image_only.max()
+        paired_image_only = paired_image_only / paired_image_only.max()
+        unpaired_image_text = unpaired_image_text / unpaired_image_text.max()
+        paired_image_text = paired_image_text / paired_image_text.max()
+        unpaired_untrained_bridged_test = unpaired_untrained_bridged_test / unpaired_untrained_bridged_test.max()
+        paired_untrained_bridged_test = paired_untrained_bridged_test / paired_untrained_bridged_test.max()
+        unpaired_trained_bridged_test = unpaired_trained_bridged_test / unpaired_trained_bridged_test.max()
+        paired_trained_bridged_test = paired_trained_bridged_test / paired_trained_bridged_test.max()
+        
+
+        # Use bar traces instead of histograms: create bin centers for x-axis
+        min_sim = torch.min(unpaired_image_only.min(), paired_image_only.min()).item()
+        max_sim = torch.max(unpaired_image_only.max(), paired_image_only.max()).item()
+        x_centers = np.linspace(
+            min_sim + (max_sim - min_sim) / (2 * num_bins),
+            max_sim - (max_sim - min_sim) / (2 * num_bins),
+            num_bins,
+        )
 
         # Plotly histograms in two subplots, left should show intra-modal, right CLIP and SeMoBridge (inter-modal)
-        fig = make_subplots(rows=1, cols=2, subplot_titles=("Intra-modal", "Inter-modal"))
-        # Intra-modal (bar plot)
-        bins = len(unpaired_image_only)
-        x = np.linspace(0.0, 1.0, bins)
-        bar_width = (1.0 / bins) * 0.9
+        #fig = make_subplots(rows=1, cols=3, subplot_titles=("Intra-modal", "CLIP (Inter-modal)", "SeMoBridge (Inter-modal)"))
+        fig = make_subplots(rows=1, cols=4)
 
         fig.add_trace(
             go.Bar(
-            x=x,
-            y=unpaired_image_only,
+            x=x_centers,
+            y=unpaired_image_only.cpu().numpy(),
             name="Image-Image Unpaired",
-            opacity=0.75,
-            marker_color="orange",
-            width=bar_width,
-            marker_line=dict(width=0),
+            marker=dict(color="#4EC4D9"),
+            opacity=0.8,
             ),
             row=1,
             col=1,
         )
         fig.add_trace(
             go.Bar(
-            x=x,
-            y=paired_image_only,
+            x=x_centers,
+            y=paired_image_only.cpu().numpy(),
             name="Image-Image Paired",
-            opacity=0.75,
-            marker_color="yellow",
-            width=bar_width,
-            marker_line=dict(width=0),
+            marker=dict(color="#4E73D9"),
+            opacity=0.8,
             ),
             row=1,
             col=1,
         )
+        # --------------- RIGHT PLOT (INTER-MODAL) ----------------
+        min_sim = torch.min(torch.stack([unpaired_image_text.min(), paired_image_text.min()])).item()
+        max_sim = torch.max(torch.stack([unpaired_image_text.max(), paired_image_text.max()])).item()
+        x_centers = np.linspace(
+            min_sim + (max_sim - min_sim) / (2 * num_bins),
+            max_sim - (max_sim - min_sim) / (2 * num_bins),
+            num_bins,
+        )
 
-        # # Inter-modal
-        # fig.add_trace(
-        #     go.Histogram(
-        #         x=unpaired_image_text,
-        #         name="Image-Text Unpaired",
-        #         opacity=0.75,
-        #         marker_color="green",
-        #         nbins=50,
-        #         histnorm="density",
-        #     ),
-        #     row=1,
-        #     col=2,
-        # )
-        # fig.add_trace(
-        #     go.Histogram(
-        #         x=paired_image_text,
-        #         name="Image-Text Paired",
-        #         opacity=0.75,
-        #         marker_color="olive",
-        #         nbins=50,
-        #         histnorm="density",
-        #     ),
-        #     row=1,
-        #     col=2,
-        # )
-        # fig.add_trace(
-        #     go.Histogram(
-        #         x=unpaired_untrained_bridged_test,
-        #         name="Image-Bridged Unpaired",
-        #         opacity=0.75,
-        #         marker_color="purple",
-        #         nbins=50,
-        #         histnorm="density",
-        #     ),
-        #     row=1,
-        #     col=2,
-        # )
-        # fig.add_trace(
-        #     go.Histogram(
-        #         x=paired_untrained_bridged_test,
-        #         name="Image-Bridged Paired",
-        #         opacity=0.75,
-        #         marker_color="red",
-        #         nbins=50,
-        #         histnorm="density",
-        #     ),
-        #     row=1,
-        #     col=2,
-        # )
+        fig.add_trace(
+            go.Bar(
+            x=x_centers,
+            y=unpaired_image_text.cpu().numpy(),
+            name="Image-Text Unpaired",
+            marker=dict(color="#00D51C"),
+            opacity=0.8,
+            ),
+            row=1,
+            col=2,
+        )
+        fig.add_trace(
+            go.Bar(
+            x=x_centers,
+            y=paired_image_text.cpu().numpy(),
+            name="Image-Text Paired",
+            marker=dict(color="#269548"),
+            opacity=0.8,
+            ),
+            row=1,
+            col=2,
+        )
 
+        # --------------- RIGHT PLOT (SeMoBridge) ----------------
+        min_sim = torch.min(torch.stack([unpaired_untrained_bridged_test.min(), paired_untrained_bridged_test.max()])).item()
+        max_sim = torch.max(torch.stack([unpaired_untrained_bridged_test.max(), paired_untrained_bridged_test.max()])).item()
+        x_centers = np.linspace(
+            min_sim + (max_sim - min_sim) / (2 * num_bins),
+            max_sim - (max_sim - min_sim) / (2 * num_bins),
+            num_bins,
+            dtype=np.float32,
+        )
+
+        fig.add_trace(
+            go.Bar(
+            x=x_centers,
+            y=unpaired_untrained_bridged_test.cpu().numpy(),
+            name="SeMoBridge Unpaired",
+            marker=dict(color="#FF6C6C"),
+            opacity=0.8,
+            ),
+            row=1,
+            col=3,
+        )
+        fig.add_trace(
+            go.Bar(
+            x=x_centers,
+            y=paired_untrained_bridged_test.cpu().numpy(),
+            name="SeMoBridge Paired",
+            marker=dict(color="#8F2121"),
+            opacity=0.8,
+            ),
+            row=1,
+            col=3,
+        )
+
+        # --------------- TRAINED SeMoBridge ----------------
+        min_sim = torch.min(torch.stack([unpaired_trained_bridged_test.min(), paired_trained_bridged_test.max()])).item()
+        max_sim = torch.max(torch.stack([unpaired_trained_bridged_test.max(), paired_trained_bridged_test.max()])).item()
+        x_centers = np.linspace(
+            min_sim + (max_sim - min_sim) / (2 * num_bins),
+            max_sim - (max_sim - min_sim) / (2 * num_bins),
+            num_bins,
+            dtype=np.float32,
+        )
+        fig.add_trace(
+            go.Bar(
+            x=x_centers,
+            y=unpaired_trained_bridged_test.cpu().numpy(),
+            name="Trained SeMoBridge Unpaired",
+            marker=dict(color="#FF6CF3"),
+            opacity=0.8,
+            ),
+            row=1,
+            col=4,
+        )
+        fig.add_trace(
+            go.Bar(
+            x=x_centers,
+            y=paired_trained_bridged_test.cpu().numpy(),
+            name="Trained SeMoBridge Paired",
+            marker=dict(color="#87218F"),
+            opacity=0.8,
+            ),
+            row=1,
+            col=4,
+        )
+
+        axis_kargs = dict(range=[0.0, 1.0], dtick=0.2, ticks="outside", tickwidth=2, showgrid=False, gridwidth=1, gridcolor='lightgrey', zeroline=False, linecolor='black', linewidth=2, mirror=True)
+        yaxis_kargs = axis_kargs.copy()
+        yaxis_kargs.update(dict(range=[0.0, 1.05]))
 
         fig.update_layout(
             # remove legend for now
             showlegend=False,
             barmode="overlay",
             # title=f"Cosine Similarity Distributions by Modalities, {self.cfg.DATASET.NAME} {self.cfg.DATASET.NUM_SHOTS} shots, {self.cfg.MODEL.BACKBONE.NAME}",
-            xaxis_title="Cosine Similarity",
-            yaxis_title="Sample Density",
+            #xaxis_title="Cosine Similarity",
+            #yaxis_title="Sample Density",
             bargap=0.0,
-            margin=dict(l=0, r=0, t=0, b=100),  # Remove margin
+            width   =1300,
+            height  =300,
+            margin=dict(l=5, r=5, t=5, b=10),  # Remove margin
             font=dict(
                 size=28,
                 family="Times New Roman",
@@ -827,19 +908,17 @@ class SeMoBridge(SimpleTrainer):
             # Make background white
             plot_bgcolor="white",
             paper_bgcolor="white",
+            
             # Add outline to the plot
-            xaxis=dict(
-                showline=True,
-                linecolor="black",
-                linewidth=2,
-                mirror=True,  # Mirror the outline on both sides
-            ),
-            yaxis=dict(
-                showline=True,
-                linecolor="black",
-                linewidth=2,
-                mirror=True,  # Mirror the outline on both sides
-            ),
+            xaxis=axis_kargs,
+            yaxis=yaxis_kargs,
+            xaxis2=axis_kargs,
+            yaxis2=yaxis_kargs,
+            xaxis3=axis_kargs,
+            yaxis3=yaxis_kargs,
+            xaxis4=axis_kargs,
+            yaxis4=yaxis_kargs,
+            
         )
 
         # Add grey line to x=0
@@ -868,10 +947,10 @@ class SeMoBridge(SimpleTrainer):
 
         print("Saving cosine similarity distributions...")
         fig_path = os.path.join(self.output_dir, "cosine_similarity_distributions.pdf")
-        # fig.write_image(fig_path, width=800, height=500)
-        # print(f"Saved cosine similarity distributions to {fig_path}")
-        fig_path = fig_path.replace(".pdf", ".png")
-        fig.write_image(fig_path, width=800, height=500)
+        fig.write_image(fig_path, width=1300, height=300)
+        print(f"Saved cosine similarity distributions to {fig_path}")
+        fig_path = fig_path.replace(".pdf", ".svg")
+        fig.write_image(fig_path, width=1300, height=300)
         print(f"Saved cosine similarity distributions to {fig_path}")
 
     def figure_intra_modal_vs_inter_modal_similarity(self):
@@ -1492,10 +1571,6 @@ class SeMoBridge(SimpleTrainer):
             @ self.features.few_shot_embeds_mean_normed.T
         )
 
-        semobridge_conv_prompt_logits = (
-            val_embeds_converted_projected_normed @ final_prompts_normed.T
-        )
-
         direct_intra_modal_logits = (
             self.features.val_embeds_normed
             @ self.features.few_shot_embeds_mean_normed.T
@@ -1515,10 +1590,6 @@ class SeMoBridge(SimpleTrainer):
             semobridge_conv_images_logits.argmax(dim=1) == self.features.val_labels
         ).float().mean().item() * 100.0
         print(f"fhat^proj <> F^proj: {acc:.2f}%")
-        acc = (
-            semobridge_conv_prompt_logits.argmax(dim=1) == self.features.val_labels
-        ).float().mean().item() * 100.0
-        print(f"fhat^proj <> Fhat^proj: {acc:.2f}%")
 
         results = None
 
@@ -1545,7 +1616,6 @@ class SeMoBridge(SimpleTrainer):
         if (
             "z2" in self.cfg.LOGITS
             or "z3" in self.cfg.LOGITS
-            or "z4" in self.cfg.LOGITS
         ):
             param_names.append("smoothness")
 
@@ -1555,8 +1625,6 @@ class SeMoBridge(SimpleTrainer):
             param_names.append("beta")
         if "z3" in self.cfg.LOGITS:
             param_names.append("gamma")
-        if "z4" in self.cfg.LOGITS:
-            param_names.append("delta")
 
         if "z1" in self.cfg.LOGITS:
             param_names.append("lambda1")
@@ -1564,8 +1632,6 @@ class SeMoBridge(SimpleTrainer):
             param_names.append("lambda2")
         if "z3" in self.cfg.LOGITS:
             param_names.append("lambda3")
-        if "z4" in self.cfg.LOGITS:
-            param_names.append("lambda4")
 
         # param_names = [
         #     "smoothness",
@@ -1608,7 +1674,6 @@ class SeMoBridge(SimpleTrainer):
                     self.features.val_clip_logits,
                     semobridge_logits,
                     semobridge_conv_images_logits,
-                    semobridge_conv_prompt_logits,
                     params,
                 )
                 pred = blended_logits.argmax(dim=1)
@@ -1657,16 +1722,12 @@ class SeMoBridge(SimpleTrainer):
             test_embeds_converted_projected_normed
             @ self.features.few_shot_embeds_mean_normed.T
         )
-        semobridge_conv_prompt_logits = (
-            test_embeds_converted_projected_normed @ final_prompts_normed.T
-        )
 
         final_logits = self.blend_logits(
             self.features.few_shot_divergence,
             self.features.test_clip_logits,
             semobridge_logits,
             semobridge_conv_images_logits,
-            semobridge_conv_prompt_logits,
             best_params,
         )
 
@@ -1686,7 +1747,6 @@ class SeMoBridge(SimpleTrainer):
         clip_logits,
         semobridge_logits,
         semobridge_conv_images_logits,
-        semobridge_conv_prompt_logits,
         params,
     ):
         """Blend the logits from CLIP and Semobridge."""
@@ -1712,11 +1772,6 @@ class SeMoBridge(SimpleTrainer):
                 (-1)
                 * (params["gamma"] - params["gamma"] * semobridge_conv_images_logits)
             ).exp() @ soft_few_shot_labels
-        if "delta" in params.keys():
-            semobridge_conv_prompt_logits_exp = (
-                (-1)
-                * (params["delta"] - params["delta"] * semobridge_conv_prompt_logits)
-            ).exp() @ soft_few_shot_labels
 
         # Blend logits batch-wise
         blended_logits = torch.zeros(
@@ -1731,8 +1786,6 @@ class SeMoBridge(SimpleTrainer):
             blended_logits += params["lambda2"] * semobridge_logits_exp
         if "lambda3" in params.keys():
             blended_logits += params["lambda3"] * semobridge_conv_images_logits_exp
-        if "lambda4" in params.keys():
-            blended_logits += params["lambda4"] * semobridge_conv_prompt_logits_exp
 
         return blended_logits
 

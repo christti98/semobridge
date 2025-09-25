@@ -41,28 +41,31 @@ datasets = [
     "ImageNet",
 ]
 
-shot_ticks = [0, 1, 2, 4, 8, 16]
-tick_map = {0: 0, 1: 0.2, 2: 1.2, 4: 2.2, 8: 3.2, 16: 4.2}
+shot_ticks = [1, 2, 4, 8, 16]
+tick_map = {0: 0.0, 1: 0.2, 2: 1.2, 4: 2.2, 8: 3.2, 16: 4.2}
+
+show_x_axis_title = [True, False, False, False, False, True, False, True, False, True, False]
+show_y_axis_title = [True, False, False, False, True, False, False, False, False, False, False]
 
 # Define methods as a dictionary with their attributes (name, type, color, symbol)
 methods_dict = {
     # TRAINING-FREE METHODS
     #"CLIP zero-shot": {"type": "training-free", "color": "#6CC557", "symbol": "cross"},
-    "Tip-Adapter": {"type": "training-free", "color": "#F9A800", "symbol": "circle"},
+    "Tip-Adapter": {"type": "training-free", "color": "#F9A800", "symbol": "triangle-down"},
     #"Tip-X": {"type": "training-free", "color": "#FF6600", "symbol": "circle"},
     "APE": {"type": "training-free", "color": "#4E95D9", "symbol": "circle"},
-    "SeMoBridge": {"type": "training-free", "color": "#87218F", "symbol": "circle"},
+    "SeMoBridge": {"type": "training-free", "color": "#87218F", "symbol": "star"},
     # TRAINING METHODS
     #"CoOp": {"type": "training", "color": "#6CC557", "symbol": "circle"},
-    "CLIP-Adapter": {"type": "training", "color": "#B49250", "symbol": "circle"},
-    "Tip-Adapter-F": {"type": "training", "color": "#F9A800", "symbol": "circle"},
+    #"CLIP-Adapter": {"type": "training", "color": "#B49250", "symbol": "circle"},
+    "Tip-Adapter-F": {"type": "training", "color": "#F9A800", "symbol": "triangle-down"},
     "APE-T": {"type": "training", "color": "#4E95D9", "symbol": "circle"},
-    "CLIP-LoRA": {"type": "training", "color": "#4EB4D9", "symbol": "circle"},
-    "LDC": {"type": "training", "color": "#38DFAA", "symbol": "circle"},
+    "CLIP-LoRA": {"type": "training", "color": "#4EB4D9", "symbol": "cross"},
+    "LDC": {"type": "training", "color": "#38DFAA", "symbol": "diamond"},
     #"2SFS": {"type": "training", "color": "#A6A600", "symbol": "circle"},
     "PromptSRC": {"type": "training", "color": "#D9388A", "symbol": "circle"},
-    "SkipT": {"type": "training", "color": "#2E2CC7", "symbol": "circle"},
-    "SeMoBridge-T": {"type": "training", "color": "#87218F", "symbol": "circle"},
+    "SkipT": {"type": "training", "color": "#2E2CC7", "symbol": "square"},
+    "SeMoBridge-T": {"type": "training", "color": "#87218F", "symbol": "star"},
 }
 
 # Make color into rgba with alpha 0.5 for non-SeMoBridge methods
@@ -103,8 +106,6 @@ def plot_for_architecture_and_method(
         # Get number from AVERAGE ACCURACY column
         for method in methods_filtered:
             avg_scores = raw[raw["Method"] == method]["AVERAGE ACCURACY"].apply(extract_score)
-            # add nan to the beginning
-            avg_scores = np.concatenate(([np.nan], avg_scores.to_numpy(dtype=float)))
 
             # Only plot if there's at least one valid average value
             if np.all(np.isnan(avg_scores)):
@@ -121,7 +122,7 @@ def plot_for_architecture_and_method(
                     name=f"{method}",
                     marker=dict(
                         color=methods_dict[method]["color"],
-                        size=18,
+                        size=32 if "SeMoBridge" in method else 24,
                         symbol=methods_dict[method]["symbol"],
                         # Add white outline if it is SeMoBridge
                         line=dict(color="white", width=2 if "SeMoBridge" in method else 0)
@@ -160,7 +161,7 @@ def plot_for_architecture_and_method(
                     name=method,
                     marker=dict(
                         color=color,
-                        size=18,
+                        size=32 if "SeMoBridge" in method else 24,
                         symbol=symbol,
                         # Add white outline if it is SeMoBridge
                         line=dict(color="white", width=2 if "SeMoBridge" in method else 0)
@@ -179,24 +180,36 @@ def plot_for_architecture_and_method(
 
     title = ""
     if average:
-        title = f"{'Training-free' if is_training_free else 'Training'} Average of 11 Datasets"
+        #title = f"{'Training-free' if is_training_free else 'Training'} Average of 11 Datasets"
+        title = "<b>Average</b>"
     else:
-        title = f"{'Training-free' if is_training_free else 'Training'} on {dataset}"
+        #title = f"{'Training-free' if is_training_free else 'Training'} on {dataset}"
+        title = f"{dataset}"
 
     tickvals = list(tick_map.values())
     ticktext = list(tick_map.keys())
 
     # If it is training, remove the 0 shot tick
-    if not is_training_free:
-        tickvals = tickvals[1:]
-        ticktext = ticktext[1:]
+    tickvals = tickvals[1:]
+    ticktext = ticktext[1:]
+
+    if average:
+        show_x_axis_title_now = False
+        show_y_axis_title_now = True
+    else:
+        show_x_axis_title_now = show_x_axis_title[datasets.index(dataset) if dataset in datasets else -1]
+        show_y_axis_title_now = show_y_axis_title[datasets.index(dataset) if dataset in datasets else -1]
 
     fig.update_layout(
         title=title,
-        title_x=0.5,  # Center the title
+        title_x=0.6,  # Center the title
+        title_y=0.995,  # Move the title slightly down
         title_xanchor="center",  # Ensure that the title is anchored in the center
         xaxis=dict(
-            title="Number of Shots",
+            title=dict({
+                "text": "Shots" if show_x_axis_title_now else "",
+                'standoff': 20 if show_x_axis_title_now else 0
+            }),
             range=x_range,
             tickvals=tickvals,  # Use the tick values from the mapping
             ticktext=ticktext,  # Use the original shot values as labels
@@ -206,17 +219,23 @@ def plot_for_architecture_and_method(
             tickcolor="black",  # Set the color of the ticks to black
             ticks="outside",  # Place the ticks outside the axis
             tickwidth=2,  # Set the width of the ticks (optional)
-            type="linear",  # Use linear scale for x-axis
+            type="linear",  # Use linear scale for x-axis,
+            
         ),
         yaxis=dict(
-            title="Accuracy (%)",
+            title=dict({
+                'text': "Acc. (%)" if show_y_axis_title_now else "",
+                'standoff': 20
+            }),
             range=y_range,
             showgrid=True,  # Enable grid lines for y-axis
             gridcolor="lightgray",  # Set grid line color (optional)
-            gridwidth=1,  # Set grid line width (optional)
+            gridwidth=2,  # Set grid line width (optional)
             tickcolor="black",  # Set the color of the ticks to black
             ticks="outside",  # Place the ticks outside the axis
             tickwidth=2,  # Set the width of the ticks (optional)
+            # show ticks always with 1 decimal place
+            tickformat=".1f",
         ),
         legend=dict(
             x=0.99,
@@ -225,12 +244,12 @@ def plot_for_architecture_and_method(
             yanchor="bottom",
             traceorder="reversed",  # Invert the order of the methods in the legend
             # smaller legend
-            font=dict(size=22, family="Times New Roman"),
+            font=dict(size=24, family="Times New Roman", color="black"),
             # background opacity
             bgcolor="rgba(255, 255, 255, 0.75)",
         ),
-        margin=dict(l=50, r=15, t=75, b=40),
-        font=dict(size=30, family="Times New Roman"),
+        margin=dict(l=0, r=0, t=50, b=0),
+        font=dict(size=36, family="Times New Roman", color="black"),
         # White background
         paper_bgcolor="white",
         plot_bgcolor="white",
@@ -250,8 +269,8 @@ def plot_for_architecture_and_method(
     save_path = f"{directory}/{dataset if not average else 'AVERAGE'}.pdf"
     fig.write_image(
         save_path,
-        width=700,
-        height=600,
+        width=700 * 0.9,
+        height=550 * 0.9,
     )
     print(f"Saved plot to {save_path}")
 

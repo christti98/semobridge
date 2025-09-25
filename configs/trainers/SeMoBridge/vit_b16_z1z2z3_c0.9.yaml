@@ -1,0 +1,77 @@
+DATALOADER:
+  TRAIN_X:
+    BATCH_SIZE: 128
+  TEST:
+    BATCH_SIZE: 512
+  NUM_WORKERS: 8
+
+HP_SEARCH:
+  N_TRIALS: 1000
+
+LOGITS: ["z1", "z2", "z3"]  # Options: z1, z2, z3, z4
+
+INPUT:
+  SIZE: (224, 224)
+  #SIZE: (224)
+  INTERPOLATION: "bicubic"
+  PIXEL_MEAN: [0.48145466, 0.4578275, 0.40821073]
+  PIXEL_STD: [0.26862954, 0.26130258, 0.27577711]
+  TRANSFORMS: ["normalize"]
+
+  # NOTE: Augmentation is now handled in the dataset config, DO NOT ADD IT HERE OR IT WILL OVERRIDE!!!
+  # AUGMENT_EPOCHS: 1
+  # AUGMENT_TRANSFORMS: ["horizontal_flip"]
+  # RRCROP_SCALE: [0.8, 1.0]
+
+  #TRANSFORMS: ["random_resized_crop", "random_flip", "normalize"]
+
+OPTIM:
+  NAME: "adamw"
+  LR: 0.00015
+  WEIGHT_DECAY: 0.01
+  MOMENTUM: 0.0
+  MAX_EPOCH: 5000
+  LR_SCHEDULER: "single_step"
+  STEPSIZE: [0]
+  GAMMA: 1.0 # constant learning rate
+  WARMUP_EPOCH: 500
+  WARMUP_TYPE: "linear"
+  WARMUP_CONS_LR: 1e-5
+
+TRAIN:
+  PRINT_FREQ: 1
+
+  LOSSES: ["img_mean", "txtp_mean", "txte_mean", "consistency", "bias_norm"]
+
+  IMAGE_TEXT_LOSS_WEIGHT:  # 0.0 -> All text, 1.0 -> All image
+    OxfordPets: 0.5
+    OxfordFlowers: 0.5
+    FGVCAircraft: 0.5
+    DescribableTextures: 0.5
+    EuroSAT: 0.5
+    StanfordCars: 0.5
+    Food101: 0.5
+    SUN397: 0.5
+    Caltech101: 0.5
+    UCF101: 0.5
+    ImageNet: 0.5
+    ImageNetSketch: 0.5
+    ImageNetV2: 0.5
+    ImageNetA: 0.5
+    ImageNetR: 0.5
+
+  CONS_LOSS_WEIGHT:  # 0.0 -> All text, 1.0 -> All image
+    ImageNet: 0.9
+  
+
+  TEXT_LENGTH_INIT: 27.5 # 27.5 # From SD-IPC
+  TEXT_LENGTH_TRAINABLE: False
+
+  CHECKPOINT_FREQ: 0
+  EARLY_STOPPING:
+    ENABLED: False
+    PATIENCE: 1000
+
+MODEL:
+  BACKBONE:
+    NAME: "ViT-B/16"
