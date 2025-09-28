@@ -1,2 +1,3 @@
 [submodule "Dassl.pytorch"]
 	url = git@github.com:christti98/Dassl.pytorch.git
+	path = Dassl.pytorch
