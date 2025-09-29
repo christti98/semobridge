@@ -5,7 +5,7 @@ This repo contains code needed to reproduce the results for SeMoBridge and SeMoB
 ## How to Install
 
 ### Dassl
-This code is built on top of the code for [CoOp](https://github.com/KaiyangZhou/CoOp). It uses the toolbox Dassl.pytorch, so you need to install the `dassl` environment first. ONLY USE THE DASSL FORK, as it contains a fix to work with PyTorch 2.7.0.
+This code is built on top of the code for [CoOp](https://github.com/KaiyangZhou/CoOp). It uses the toolbox Dassl.pytorch, so you need to install the `dassl` environment first. **Only use the Dassl fork**, as it contains a fix to work with PyTorch 2.7.0.
 
 Clone the Dassl fork:
 ```
