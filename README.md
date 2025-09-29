@@ -62,8 +62,8 @@ They support the arguments<br>`ood_notrain.sh [CONFIG FILE] [TEXT PROMPTS] [CSB 
 To run SeMoBridge-T on OOD datasets, it has to be trained on ImageNet first, as the OOD script will load the model from the OUTPUT directory.
 
 ### Visualizations and Plots
-To generate Figures 2 and 4, manually run `train.py` with the `--vis` argument.<br>
-Other figures are generated with `bias_norms_plot.py`, `draw_curves.py` (from a custom csv file), `lambda_plot.py`, and `text_prompts_plot.py`.
+To generate plots in Figures 2 (right) and 7, manually run `train.py` with the `--vis` argument.<br>
+Other figures are generated with `plot_training_time.py` `bias_norms_plot.py`, `draw_curves.py` (from a custom csv file), `lambda_plot.py`, and `text_prompts_plot.py`.
 
 ### Notes
 Preprocessed features will be saved in `preprocessed/`. They may have to be deleted if changes to the code are made.
