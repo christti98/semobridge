@@ -1,6 +1,20 @@
-# SeMoBridge: Semantic Modality Bridge for Efficient Few-Shot Adaptation of CLIP
+<div align="center">
+<h1>SeMoBridge</h1>
+<h3>Semantic Modality Bridge for Efficient Few-Shot Adaptation of CLIP</h3>
 
-This repo contains code needed to reproduce the results for SeMoBridge and SeMoBridge-T.
+[Christoph Timmermann](https://github.com/christti98), [Hyunse Lee](https://sites.google.com/view/wj926/members/students) & [Woojin Lee](https://sites.google.com/view/wj926/members/professor)
+
+Graduate School of Computer Science and Artificial Intelligence<br>
+Dongguk University
+
+[![arXiv](https://img.shields.io/badge/arXiv-2509.26036-b31b1b.svg)](https://arxiv.org/abs/2509.26036) [![Python 3.12.8](https://img.shields.io/badge/python-3.12.8-blue.svg)](https://www.python.org/downloads/release/python-3128/) [![PyTorch](https://img.shields.io/badge/PyTorch_2.7.0-grey.svg?logo=PyTorch)](https://pytorch.org/get-started/previous-versions/) [![CC BY 4.0][cc-by-shield]][cc-by]
+
+
+</div>
+
+[cc-by]: http://creativecommons.org/licenses/by/4.0/
+[cc-by-image]: https://i.creativecommons.org/l/by/4.0/88x31.png
+[cc-by-shield]: https://img.shields.io/badge/license-CC%20BY%204.0-lightgrey.svg
 
 ## How to Install
 
