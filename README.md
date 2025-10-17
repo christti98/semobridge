@@ -55,7 +55,7 @@ Follow [DATASETS.md](DATASETS.md) to install the datasets.
 
 ## How to Run
 
-We include four bash (`.sh`) scripts to make running SeMoBridge or SeMoBridge-T easier.
+We include four shell (`.sh`) scripts to make running SeMoBridge or SeMoBridge-T easier.
 
 ### Training-free SeMoBridge
 `scripts/semobridge/run_all_datasets_notrain.sh` will run SeMoBridge on the standard 11 datasets for all shots (1, 2, 4, 8, 16) on three seeds (1, 2, 3).<br>
