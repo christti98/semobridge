@@ -1,6 +1,6 @@
 <div align="center">
 <h1>SeMoBridge</h1>
-<h3>Semantic Modality Bridge for Efficient Few-Shot Adaptation of CLIP</h3>
+<h3>A Semantic Modality Bridge for Intra-Modal Alignment in CLIP</h3>
 
 [Christoph Timmermann](https://github.com/christti98), [Hyunse Lee](https://sites.google.com/view/wj926/members/students) & [Woojin Lee](https://sites.google.com/view/wj926/members/professor)
 
